@@ -1,0 +1,43 @@
+version: '3.4'
+
+services:
+  vdb_main_server_api:
+    restart: always
+    image: luminodiode/vdb_main_server_api
+    build: 
+      context: ./vdb_main_server_api
+      dockerfile: ./dockerfile
+  environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+    secrets:
+      - source: backSecs
+        target: secrets.json
+    volumes:
+      - image_indexator_user_added:/app/wwwroot/user_added/
+
+  vdb_main_server_proxy:
+    restart: always
+    image: nginx:1-alpine
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "5050:80"
+      
+  database:
+    restart: always
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_PASSWORD: qwerty_OVERRIDE_ME
+      POSTGRES_DB: image_indexator_db_OVERRIDE_ME
+    volumes:
+      - image_indexator_database:/var/lib/postgresql/data/
+
+secrets:
+  backSecs:
+    file: ./backendsecrets.json
+    
+volumes:
+    image_indexator_user_added:
+        external: false
+    image_indexator_database:
+        external: false

@@ -1,25 +1,63 @@
-var builder = WebApplication.CreateBuilder(args);
+using vdb_main_server_api.Services;
 
-// Add services to the container.
+#if DEBUG
+#endif
 
-builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+namespace vdb_main_server_api;
 
-var app = builder.Build();
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+internal class Program
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+	private static void Main(string[] args)
+	{
+		var builder = WebApplication.CreateBuilder(args);
+
+		builder.Configuration
+			.AddJsonFile("./appsettings.json", false)
+			.AddJsonFile("/run/secrets/aspsecrets.json", true)
+			.AddEnvironmentVariables()
+			.Build();
+
+		builder.Logging.AddConsole();
+
+		builder.Services.AddControllers();
+
+#if DEBUG
+		if (builder.Environment.IsDevelopment())
+		{
+			builder.Services.AddSwaggerGen(c =>
+			{
+				//c.SwaggerDoc("v1", new OpenApiInfo { Title = "TestSwagger", Version = "v1" });
+				c.CustomSchemaIds(x => x.FullName);
+			});
+		}
+#endif
+
+		builder.Services.AddSingleton<EnvironmentProvider>();
+		builder.Services.AddSingleton<SettingsProviderService>();
+		builder.Services.AddSingleton<VpnNodesService>();
+		builder.Services.AddHostedService(pr => pr.GetRequiredService<VpnNodesService>());
+
+		var app = builder.Build();
+
+
+		app.UseCors(opts =>
+		{
+			opts.AllowAnyOrigin();
+			opts.AllowAnyMethod();
+			opts.AllowAnyHeader();
+		});
+
+#if DEBUG
+		if (app.Environment.IsDevelopment())
+		{
+			app.UseSwagger();
+			app.UseSwaggerUI();
+		}
+#endif
+
+		app.UseRouting();
+		app.MapControllers();
+
+		app.Run();
+	}
 }
-
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
-
-app.MapControllers();
-
-app.Run();

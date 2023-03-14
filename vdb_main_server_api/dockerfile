@@ -1,0 +1,10 @@
+FROM mcr.microsoft.com/dotnet/aspnet:7.0-alpine AS base
+
+FROM mcr.microsoft.com/dotnet/sdk:7.0-alpine AS build
+COPY . ./vdb_main_server_api
+RUN dotnet publish /vdb_main_server_api/vdb_main_server_api.csproj -c "Release" -r linux-musl-x64 --no-self-contained -o /app/publish
+
+FROM base AS final
+COPY --from=publish /app/publish .
+EXPOSE 5000
+ENTRYPOINT ["dotnet", "image_indexator_backend.dll"]
