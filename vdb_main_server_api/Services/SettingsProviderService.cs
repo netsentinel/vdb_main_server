@@ -12,14 +12,30 @@ public class SettingsProviderService
 	protected readonly IConfiguration _configuration;
 	protected readonly EnvironmentProvider _environment;
 
-	public virtual IEnumerable<VpnNodeInfo> VpnNodeInfos=>
+	public virtual IEnumerable<VpnNodeInfo> VpnNodeInfos =>
 		_configuration.GetSection(nameof(VpnNodeInfos)).Get<VpnNodeInfoNotParsed[]>()?
-		.Select(x=> new VpnNodeInfo(x)) ?? Enumerable.Empty<VpnNodeInfo>();
+		.Select(x => new VpnNodeInfo(x)) ?? Enumerable.Empty<VpnNodeInfo>();
 
-	public virtual VpnNodesServiceSettings VpnNodesServiceSettings => 
+	public virtual VpnNodesServiceSettings VpnNodesServiceSettings =>
 		_configuration.GetSection(nameof(VpnNodesServiceSettings))
 		.Get<VpnNodesServiceSettings>() ?? new();
 
+	public virtual JwtServiceSettings JwtServiceSettings
+	{
+		get
+		{
+			var result = _configuration.GetSection(nameof(JwtServiceSettings))
+				.Get<JwtServiceSettings>() ?? new();
+
+			if (_environment.GENERATE_JWT_SIG ?? false)
+			{
+				result.SigningKeyBase64 = _environment.JWT_SIGNING_KEY_B64
+					?? throw new NullReferenceException(nameof(_environment.JWT_SIGNING_KEY_B64));
+			}
+
+			return result;
+		}
+	}
 
 	public SettingsProviderService(IConfiguration configuration, EnvironmentProvider environmentProvider)
 	{

@@ -24,11 +24,7 @@ internal class Program
 #if DEBUG
 		if (builder.Environment.IsDevelopment())
 		{
-			builder.Services.AddSwaggerGen(c =>
-			{
-				//c.SwaggerDoc("v1", new OpenApiInfo { Title = "TestSwagger", Version = "v1" });
-				c.CustomSchemaIds(x => x.FullName);
-			});
+			builder.Services.AddSwaggerGen();
 		}
 #endif
 

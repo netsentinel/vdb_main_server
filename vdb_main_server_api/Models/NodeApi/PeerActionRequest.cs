@@ -1,4 +1,4 @@
-﻿namespace vdb_node_api.Models.Api;
+﻿namespace vdb_node_api.Models.NodeApi;
 
 public class PeerActionRequest
 {

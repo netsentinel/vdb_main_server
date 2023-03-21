@@ -2,10 +2,12 @@
 
 public sealed class EnvironmentProvider
 {
-	[Obsolete]
-	private const string ENV_ALLOW_NOAUTH = "REST2WG_ALLOW_NOAUTH";
-	[Obsolete]
-	public bool? ALLOW_NOAUTH { get; init; } = null;
+	private const string ENV_GENERATE_JWT_SIG = "VDB_GENERATE_JWT_SIG";
+	private const string ENV_JWT_SIGNING_KEY_B64 = "VDB_JWT_SIGNING_KEY";
+
+
+	public bool? GENERATE_JWT_SIG { get; init; } = null;
+	public string? JWT_SIGNING_KEY_B64 { get; init; } = null;
 
 
 	private readonly ILogger<EnvironmentProvider> _logger;
@@ -14,7 +16,10 @@ public sealed class EnvironmentProvider
 	{
 		_logger = logger;
 
-		ALLOW_NOAUTH = ParseBoolValue(ENV_ALLOW_NOAUTH);
+		GENERATE_JWT_SIG = ParseBoolValue(ENV_GENERATE_JWT_SIG);
+
+		JWT_SIGNING_KEY_B64 = ParseStringValue(ENV_JWT_SIGNING_KEY_B64, 
+			x=> Convert.TryFromBase64String(x, new byte[512/8], out _));
 	}
 
 	private string GetIncorrectIgnoredMessage(string EnvName)

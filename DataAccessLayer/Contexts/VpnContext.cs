@@ -1,0 +1,48 @@
+﻿using DataAccessLayer.Models;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace DataAccessLayer.Contexts;
+
+
+/* MigrateAsync() on app startup recommended.
+ */
+public class VpnContext:DbContext
+{
+	public VpnContext(DbContextOptions<VpnContext> options)
+		: base(options)
+	{
+
+	}
+
+	public DbSet<User> Users { get; protected set; }
+	public DbSet<UserDevice> UserDevices { get; protected set; }
+	public DbSet<RefreshToken> RefreshTokens { get; protected set; }
+
+	protected override void OnModelCreating(ModelBuilder modelBuilder)
+	{
+		modelBuilder.Entity<User>(entity =>
+		{
+			entity.HasKey(u => u.Id);
+			entity.HasAlternateKey(u => u.Email);
+		});
+
+		modelBuilder.Entity<UserDevice>(entity =>
+		{
+			entity.HasKey(d => d.Id);
+		});
+
+		modelBuilder.Entity<RefreshToken>(entity =>
+		{
+			entity.HasKey(t => t.Id);
+		});
+
+
+
+		base.OnModelCreating(modelBuilder);
+	}
+}

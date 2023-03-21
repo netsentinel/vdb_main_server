@@ -7,7 +7,7 @@ services:
     build: 
       context: ./vdb_main_server_api
       dockerfile: ./dockerfile
-  environment:
+    environment:
       - ASPNETCORE_ENVIRONMENT=Production
     secrets:
       - source: backSecs
@@ -37,7 +37,7 @@ secrets:
     file: ./backendsecrets.json
     
 volumes:
-    image_indexator_user_added:
-        external: false
-    image_indexator_database:
-        external: false
+  image_indexator_user_added:
+    external: false
+  image_indexator_database:
+    external: false

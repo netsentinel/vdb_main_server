@@ -1,19 +1,24 @@
 ﻿using System.Net;
-using vdb_main_server_api.Models.Database;
+using System.Security.Cryptography;
+using DataAccessLayer.Models;
 
 namespace vdb_main_server_api.Models.Runtime;
 
 public class VpnNodeInfo
 {
+	public int Id { get; init; }
 	public string Name { get; init; }
 	public IPAddress IpAddress { get; init; }
 	public string SecretAccessKeyBase64 { get; init; }
+	public string? ComputedKeyHmac { get; init; }
 	public int WireguardPort { get; init; }
 	public int ApiTlsPort { get; init; }
 	public User.AccessLevels UserAccessLevelRequired { get; init; }
 
-	public VpnNodeInfo(string name, IPAddress ipAddress, string secretAccessKeyBase64, int wireguardPort = 51850, int apiTlsPort = 51851, int userAccessLevelRequired = 0)
+	public VpnNodeInfo(int id, string name, IPAddress ipAddress, string secretAccessKeyBase64, 
+		int wireguardPort = 51850, int apiTlsPort = 51851, int userAccessLevelRequired = 0)
 	{
+		this.Id = id;
 		this.Name = name ?? throw new ArgumentNullException(nameof(name));
 		this.IpAddress = ipAddress ?? throw new ArgumentNullException(nameof(ipAddress));
 		this.SecretAccessKeyBase64 = secretAccessKeyBase64 ?? throw new ArgumentNullException(nameof(secretAccessKeyBase64));
@@ -24,9 +29,14 @@ public class VpnNodeInfo
 
 	public VpnNodeInfo(VpnNodeInfoNotParsed notParsed)
 	{
+		this.Id = notParsed.Id;
 		this.Name = notParsed.Name;
 		this.IpAddress = IPAddress.Parse(notParsed.IpAddress);
 		this.SecretAccessKeyBase64 = notParsed.SecretAccessKeyBase64;
+		this.ComputedKeyHmac = notParsed.SecretHmacKeyBase64 is not null ?
+			Convert.ToBase64String(HMACSHA512.HashData(
+				Convert.FromBase64String(notParsed.SecretHmacKeyBase64),
+				Convert.FromBase64String(notParsed.SecretAccessKeyBase64))) : null;
 		this.WireguardPort = notParsed.WireguardPort;
 		this.ApiTlsPort = notParsed.ApiTlsPort;
 		this.UserAccessLevelRequired = (User.AccessLevels)notParsed.UserAccessLevelRequired;
@@ -36,6 +46,7 @@ public class VpnNodeInfo
 	{
 		return new VpnNodeInfoNotParsed
 		{
+			Id = this.Id,
 			Name = this.Name,
 			IpAddress = this.IpAddress.ToString(),
 			SecretAccessKeyBase64 = this.SecretAccessKeyBase64,
