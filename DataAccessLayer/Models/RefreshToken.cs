@@ -9,6 +9,6 @@ namespace DataAccessLayer.Models;
 public class RefreshToken
 {
 	public int Id { get; set; }
-	public int IssuedToUser { get; init; }
-	public DateTime ValidUntilUtc { get; init; }
+	public int IssuedToUser { get; set; }
+	public DateTime ValidUntilUtc { get; set; }
 }

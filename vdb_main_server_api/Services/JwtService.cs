@@ -3,6 +3,7 @@ using main_server_api.Models.UserApi.Website.Common;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
+using System.Runtime;
 using System.Security.Claims;
 using System.Text;
 
@@ -38,6 +39,27 @@ public sealed class JwtService
 			Expires = DateTime.UtcNow.Add(lifespan ?? AccessTokenLifespan),
 			SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(_signingKey), SecurityAlgorithms.HmacSha512Signature)
 		}));
+	}
+
+	public ClaimsPrincipal ValidateJwtToken(string token)
+	{
+		var result = _tokenHandler.ValidateToken(token, new TokenValidationParameters
+		{
+			ValidateIssuer = false,
+			ValidateAudience = false,
+			ValidateLifetime = true,
+			ValidateIssuerSigningKey = true,
+			IssuerSigningKey = new SymmetricSecurityKey(_signingKey)
+#if DEBUG
+			/* Данный твик устанавливает шаг проверки валидации времени смерти токена.
+			 * https://github.com/AzureAD/azure-activedirectory-identitymodel-extensions-for-dotnet/blob/dev/src/Microsoft.IdentityModel.Tokens/TokenValidationParameters.cs#L345
+			 * По умолчанию 5 минут, для тестов это слишком долго.
+			 */
+			,
+			ClockSkew = TimeSpan.Zero
+#endif
+		}, out _);
+		return result;
 	}
 
 	#region app-specific
