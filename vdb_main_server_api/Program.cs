@@ -1,3 +1,5 @@
+using DataAccessLayer.Contexts;
+using Microsoft.EntityFrameworkCore;
 using vdb_main_server_api.Services;
 
 #if DEBUG
@@ -12,13 +14,12 @@ internal class Program
 		var builder = WebApplication.CreateBuilder(args);
 
 		builder.Configuration
-			.AddJsonFile("./appsettings.json", false)
+			.AddJsonFile("./appsettings.json", true)
 			.AddJsonFile("/run/secrets/aspsecrets.json", true)
 			.AddEnvironmentVariables()
 			.Build();
 
 		builder.Logging.AddConsole();
-
 		builder.Services.AddControllers();
 
 #if DEBUG
@@ -30,8 +31,17 @@ internal class Program
 
 		builder.Services.AddSingleton<EnvironmentProvider>();
 		builder.Services.AddSingleton<SettingsProviderService>();
+		builder.Services.AddSingleton<JwtService>();
 		builder.Services.AddSingleton<VpnNodesService>();
 		builder.Services.AddHostedService(pr => pr.GetRequiredService<VpnNodesService>());
+
+
+		builder.Services.AddDbContext<VpnContext>(opts => {
+			opts.UseNpgsql(builder.Configuration["ConnectionStrings:DefaultConnection"], opts => {
+				opts.MigrationsAssembly(nameof(main_server_api));
+			});
+		});
+
 
 		var app = builder.Build();
 
@@ -54,6 +64,8 @@ internal class Program
 		app.UseRouting();
 		app.MapControllers();
 
+
+		app.Services.CreateScope().ServiceProvider.GetRequiredService<VpnContext>().Database.Migrate();
 		app.Run();
 	}
 }

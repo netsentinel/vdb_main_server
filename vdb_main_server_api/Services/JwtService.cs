@@ -26,15 +26,14 @@ public sealed class JwtService
 		this.RefreshTokenLifespan = TimeSpan.FromSeconds(settings.RefreshTokenLifespanSeconds);
 		this._signingKey = Convert.FromBase64String(settings.SigningKeyBase64);
 
-		if (_signingKey.Length != (512 / 8))
+		if(_signingKey.Length != (512 / 8))
 			throw new ArgumentOutOfRangeException("JWT signing key must be exact 512 bits long.");
 	}
 
 
 	public string GenerateJwtToken(IEnumerable<Claim> claims, TimeSpan? lifespan = null)
 	{
-		return _tokenHandler.WriteToken(_tokenHandler.CreateToken(new SecurityTokenDescriptor
-		{
+		return _tokenHandler.WriteToken(_tokenHandler.CreateToken(new SecurityTokenDescriptor {
 			Subject = new ClaimsIdentity(claims),
 			Expires = DateTime.UtcNow.Add(lifespan ?? AccessTokenLifespan),
 			SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(_signingKey), SecurityAlgorithms.HmacSha512Signature)
@@ -43,8 +42,7 @@ public sealed class JwtService
 
 	public ClaimsPrincipal ValidateJwtToken(string token)
 	{
-		var result = _tokenHandler.ValidateToken(token, new TokenValidationParameters
-		{
+		var result = _tokenHandler.ValidateToken(token, new TokenValidationParameters {
 			ValidateIssuer = false,
 			ValidateAudience = false,
 			ValidateLifetime = true,
@@ -73,6 +71,12 @@ public sealed class JwtService
 			new Claim(nameof(user.UserDevicesIds), Utf8Json.JsonSerializer.ToJsonString(user.UserDevicesIds)),
 			new Claim(nameof(user.PayedUntilUtc), user.PayedUntilUtc.ToString("o")) // 'o' format provider satisfies ISO 8601
 		});
+	}
+
+	public string GenerateRefreshJwtToken(RefreshToken token)
+	{
+		return GenerateJwtToken(new[] {
+			new Claim(nameof(token.Id), token.Id.ToString()) }, RefreshTokenLifespan);
 	}
 	#endregion
 }

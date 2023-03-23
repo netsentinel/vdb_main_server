@@ -11,7 +11,7 @@ namespace DataAccessLayer.Contexts;
 
 /* MigrateAsync() on app startup recommended.
  */
-public class VpnContext:DbContext
+public class VpnContext : DbContext
 {
 	public VpnContext(DbContextOptions<VpnContext> options)
 		: base(options)
@@ -25,24 +25,11 @@ public class VpnContext:DbContext
 
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{
+		base.OnModelCreating(modelBuilder);
+
 		modelBuilder.Entity<User>(entity =>
 		{
-			entity.HasKey(u => u.Id);
 			entity.HasAlternateKey(u => u.Email);
 		});
-
-		modelBuilder.Entity<UserDevice>(entity =>
-		{
-			entity.HasKey(d => d.Id);
-		});
-
-		modelBuilder.Entity<RefreshToken>(entity =>
-		{
-			entity.HasKey(t => t.Id);
-		});
-
-
-
-		base.OnModelCreating(modelBuilder);
 	}
 }

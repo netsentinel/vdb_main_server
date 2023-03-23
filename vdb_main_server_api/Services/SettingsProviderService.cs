@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Configuration;
+﻿using main_server_api.Models.Runtime;
+using Microsoft.Extensions.Configuration;
 using vdb_main_server_api.Models.Runtime;
 
 namespace vdb_main_server_api.Services;
@@ -27,15 +28,18 @@ public class SettingsProviderService
 			var result = _configuration.GetSection(nameof(JwtServiceSettings))
 				.Get<JwtServiceSettings>() ?? new();
 
-			if (_environment.GENERATE_JWT_SIG ?? false)
-			{
-				result.SigningKeyBase64 = _environment.JWT_SIGNING_KEY_B64
-					?? throw new NullReferenceException(nameof(_environment.JWT_SIGNING_KEY_B64));
+			if(_environment.GENERATE_JWT_SIG ?? false) {
+				// it is ok if null will throw somewhere later
+				result.SigningKeyBase64 = _environment.JWT_SIGNING_KEY_B64!;
 			}
 
 			return result;
 		}
 	}
+
+	public virtual DeviceControllerSettings DeviceControllerSettings =>
+		_configuration.GetSection(nameof(DeviceControllerSettings))
+		.Get<DeviceControllerSettings>() ?? new();
 
 	public SettingsProviderService(IConfiguration configuration, EnvironmentProvider environmentProvider)
 	{
