@@ -10,9 +10,9 @@ public sealed class EnvironmentProvider
 	public string? JWT_SIGNING_KEY_B64 { get; init; } = null;
 
 
-	private readonly ILogger<EnvironmentProvider> _logger;
+	private readonly ILogger<EnvironmentProvider>? _logger;
 
-	public EnvironmentProvider(ILogger<EnvironmentProvider> logger)
+	public EnvironmentProvider(ILogger<EnvironmentProvider>? logger)
 	{
 		_logger = logger;
 
@@ -34,17 +34,17 @@ public sealed class EnvironmentProvider
 		{
 			if (str.Equals("true", StringComparison.InvariantCultureIgnoreCase))
 			{
-				_logger.LogInformation($"{EnvName}={true}.");
+				_logger?.LogInformation($"{EnvName}={true}.");
 				return true;
 			}
 			if (str.Equals("false", StringComparison.InvariantCultureIgnoreCase))
 			{
-				_logger.LogInformation($"{EnvName}={false}.");
+				_logger?.LogInformation($"{EnvName}={false}.");
 				return false;
 			}
-			_logger.LogWarning(GetIncorrectIgnoredMessage(EnvName));
+			_logger?.LogWarning(GetIncorrectIgnoredMessage(EnvName));
 		}
-		_logger.LogInformation($"{EnvName} was not present.");
+		_logger?.LogInformation($"{EnvName} was not present.");
 		return null;
 	}
 	private int? ParseIntValue(string EnvName, int minValue = int.MinValue)
@@ -54,12 +54,12 @@ public sealed class EnvironmentProvider
 		{
 			if (int.TryParse(str, out int val))
 			{
-				_logger.LogInformation($"{EnvName}={val}.");
+				_logger?.LogInformation($"{EnvName}={val}.");
 				return val;
 			}
-			_logger.LogWarning(GetIncorrectIgnoredMessage(EnvName));
+			_logger?.LogWarning(GetIncorrectIgnoredMessage(EnvName));
 		}
-		_logger.LogInformation($"{EnvName} was not present.");
+		_logger?.LogInformation($"{EnvName} was not present.");
 		return null;
 	}
 
@@ -70,12 +70,12 @@ public sealed class EnvironmentProvider
 		{
 			if (valueValidator(str))
 			{
-				_logger.LogInformation($"{EnvName}={str}.");
+				_logger?.LogInformation($"{EnvName}={str}.");
 				return str;
 			}
-			_logger.LogWarning(GetIncorrectIgnoredMessage(EnvName));
+			_logger?.LogWarning(GetIncorrectIgnoredMessage(EnvName));
 		}
-		_logger.LogInformation($"{EnvName} was not present.");
+		_logger?.LogInformation($"{EnvName} was not present.");
 		return null;
 	}
 }

@@ -1,5 +1,8 @@
 using DataAccessLayer.Contexts;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 using vdb_main_server_api.Services;
 
 #if DEBUG
@@ -21,6 +24,22 @@ internal class Program
 
 		builder.Logging.AddConsole();
 		builder.Services.AddControllers();
+		builder.Services.AddAuthentication(opts => {
+			opts.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+		}).AddJwtBearer(opts => {
+			opts.RequireHttpsMetadata = false;
+			opts.SaveToken = false;
+
+			var env = new EnvironmentProvider(null);
+			opts.TokenValidationParameters = new TokenValidationParameters {
+				ValidateIssuerSigningKey = true,
+				IssuerSigningKey = new SymmetricSecurityKey(Convert.FromBase64String(env.JWT_SIGNING_KEY_B64
+				?? builder.Configuration["JwtServiceSettings:SigningKeyBase64"]!)), // ok to throw here
+				ValidateAudience = false,
+				ValidateIssuer = false,
+			};
+		}
+		);
 
 #if DEBUG
 		if (builder.Environment.IsDevelopment())
@@ -61,7 +80,9 @@ internal class Program
 		}
 #endif
 
+		app.UseAuthentication();
 		app.UseRouting();
+		app.UseAuthorization();
 		app.MapControllers();
 
 

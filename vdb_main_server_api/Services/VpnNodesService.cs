@@ -145,6 +145,9 @@ public sealed class VpnNodesService : BackgroundService
 			return null;
 		}
 	}
+
+	public async Task<AddPeerResponse?> AddPeerToNode(string peerPubkey, int nodeId)
+		=> await AddPeerToNode(peerPubkey, GetNodeNameById(nodeId));
 	public async Task<AddPeerResponse?> AddPeerToNode(string peerPubkey, string nodeName)
 	{
 		if (!_nameToNode.TryGetValue(nodeName, out var testedNode))
@@ -168,6 +171,9 @@ public sealed class VpnNodesService : BackgroundService
 			return null;
 		}
 	}
+
+	public async Task<bool> RemovePeerFromNode(string peerPubkey, int nodeId)
+		=> await RemovePeerFromNode(peerPubkey, GetNodeNameById(nodeId));
 	public async Task<bool> RemovePeerFromNode(string peerPubkey, string nodeName)
 	{
 		if (!_nameToNode.TryGetValue(nodeName, out var testedNode))

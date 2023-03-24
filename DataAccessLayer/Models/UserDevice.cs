@@ -25,4 +25,5 @@ public class UserDevice
 	public long Id { get; set; }
 	[MaxLength(LengthOfBase64For256Bits)] public string WgPubkey { get; set; }
 	public int? LastConnectedNodeId { get; set; }
+	public DateTime? LastSeenUtc { get; set; }
 }
