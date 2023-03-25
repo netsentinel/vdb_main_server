@@ -114,8 +114,22 @@ public sealed class VpnNodesService : BackgroundService
 			} else
 			{
 				var response = await httpClient.GetFromJsonAsync<SecuredStatusResponse>(GetStatusPathForNode(nodeInfo));
-				return response is not null && (
-					!nodeInfo.EnableStatusHmac || response.AuthKeyHmacSha512Base64.Equals(nodeInfo.ComputedKeyHmac));
+				if(response is null){
+					return false;
+				} else
+				if(!nodeInfo.EnableStatusHmac) {
+					return true;
+				} else {
+					if(response.AuthKeyHmacSha512Base64.Equals(nodeInfo.ComputedKeyHmac)) {
+						return true;
+					} else {
+						_logger.LogError($"Wrong HMAC was received from the node \'{nodeInfo.Name}\'.");
+						return false;
+					}
+				}
+
+				//return response is not null && (
+				//	!nodeInfo.EnableStatusHmac || response.AuthKeyHmacSha512Base64.Equals(nodeInfo.ComputedKeyHmac));
 			}
 		}
 		catch (HttpRequestException)

@@ -19,6 +19,7 @@ internal class Program
 		builder.Configuration
 			.AddJsonFile("./appsettings.json", true)
 			.AddJsonFile("/run/secrets/aspsecrets.json", true)
+			.AddJsonFile("/run/secrets/generated_sig.json",true)
 			.AddEnvironmentVariables()
 			.Build();
 
