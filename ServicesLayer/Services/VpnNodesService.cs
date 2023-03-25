@@ -14,6 +14,8 @@ using System.Net.Http;
 using System.Net.Mail;
 using System.Net.Http.Json;
 using vdb_node_api.Models.NodeApi;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 
 namespace vdb_main_server_api.Services;
 
@@ -94,6 +96,7 @@ public sealed class VpnNodesService : BackgroundService
 			throw new KeyNotFoundException($"Node with name \'{nodeName}\' was not found.");
 
 		testedNode.nodeStatus.IsActive = await CheckIsNodeAccessible(nodeName);
+		_logger.LogInformation($"Node \'{testedNode.nodeInfo.Name}\' is accessible: {testedNode.nodeStatus.IsActive}.");
 	}
 	public async Task<bool> CheckIsNodeAccessible(string nodeName)
 	{
@@ -107,20 +110,17 @@ public sealed class VpnNodesService : BackgroundService
 			if (nodeInfo.ComputedKeyHmac is null)
 			{
 				return (await httpClient.GetAsync(GetStatusPathForNode(nodeInfo))).IsSuccessStatusCode;
-			}
-			else
+
+			} else
 			{
 				var response = await httpClient.GetFromJsonAsync<SecuredStatusResponse>(GetStatusPathForNode(nodeInfo));
-				return response is not null && response.AuthKeyHmacSha512Base64.Equals(nodeInfo.ComputedKeyHmac);
+				return response is not null && (
+					!nodeInfo.EnableStatusHmac || response.AuthKeyHmacSha512Base64.Equals(nodeInfo.ComputedKeyHmac));
 			}
 		}
 		catch (HttpRequestException)
 		{
 			return false;
-		}
-		finally
-		{
-			_logger.LogInformation($"Node \'{nodeName}\' is accessible: {nodeStatus.IsActive}.");
 		}
 	}
 

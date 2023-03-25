@@ -1,11 +1,15 @@
-﻿using DataAccessLayer.Contexts;
+﻿using Dapper;
+using DataAccessLayer.Contexts;
 using DataAccessLayer.Models;
 using main_server_api.Models.Runtime;
 using main_server_api.Models.UserApi.Application.Device;
+using main_server_api.Models.UserApi.Website.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using System.ComponentModel.DataAnnotations;
+using System.Data.Entity;
 using System.Security.Claims;
 using vdb_main_server_api.Services;
 
@@ -50,6 +54,29 @@ public class DeviceController : ControllerBase
 		} else {
 			return accessLevel * 3 + 1;
 		}
+	}
+
+	[HttpGet]
+	public async Task<IActionResult> ListDevices()
+	{
+		var userId = int.Parse(Request.HttpContext.User.FindFirstValue(
+			nameof(UserInfo.Id))
+			?? throw new ArgumentNullException(nameof(UserInfo.Id)));
+
+		await using var sqlConn = new NpgsqlConnection(_context.Database.GetDbConnection().ConnectionString);
+
+		// how should I f4k1n do this with EF ?? nested await ToListAsync(), wtf ?
+		var query = $"""
+			SELECT * FROM "{nameof(_context.UserDevices)}"
+			WHERE "{nameof(UserDevice.Id)}" IN ((
+				SELECT "{nameof(DataAccessLayer.Models.User.UserDevicesIds)}"
+				FROM "{nameof(_context.Users)}"
+				WHERE "{nameof(DataAccessLayer.Models.User.Id)}" = {userId}
+				LIMIT 1)[1])
+			""";
+		var result = await sqlConn.QueryAsync<UserDevice>(query);
+
+		return Ok(result);
 	}
 
 	[HttpPut]

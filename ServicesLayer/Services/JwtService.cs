@@ -65,6 +65,7 @@ public sealed class JwtService
 	{
 		return GenerateJwtToken(new Claim[]
 		{
+			new Claim(nameof(user.Id),user.Id.ToString()),
 			new Claim(nameof(user.IsAdmin), user.IsAdmin.ToString()),
 			new Claim(nameof(user.Email), user.Email),
 			new Claim(nameof(user.IsEmailConfirmed),user.IsEmailConfirmed.ToString()),

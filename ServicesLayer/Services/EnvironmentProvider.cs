@@ -1,12 +1,14 @@
-﻿namespace vdb_main_server_api.Services;
+﻿using Microsoft.Extensions.Logging;
+
+namespace vdb_main_server_api.Services;
 
 public sealed class EnvironmentProvider
 {
-	private const string ENV_GENERATE_JWT_SIG = "VDB_GENERATE_JWT_SIG";
+	// there is no need to access this variable's value from the code, it's just a reminder
+	private const string ENV_GENERATE_JWT_SIG = "VDB_GENERATE_JWT_SIG"; 
 	private const string ENV_JWT_SIGNING_KEY_B64 = "VDB_JWT_SIGNING_KEY";
 
 
-	public bool? GENERATE_JWT_SIG { get; init; } = null;
 	public string? JWT_SIGNING_KEY_B64 { get; init; } = null;
 
 
@@ -15,8 +17,6 @@ public sealed class EnvironmentProvider
 	public EnvironmentProvider(ILogger<EnvironmentProvider>? logger)
 	{
 		_logger = logger;
-
-		GENERATE_JWT_SIG = ParseBoolValue(ENV_GENERATE_JWT_SIG);
 
 		JWT_SIGNING_KEY_B64 = ParseStringValue(ENV_JWT_SIGNING_KEY_B64, 
 			x=> Convert.TryFromBase64String(x, new byte[512/8], out _));

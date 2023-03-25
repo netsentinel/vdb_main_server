@@ -50,6 +50,9 @@ public sealed class AuthController : ControllerBase
 	public async Task<JwtResponse> IssueJwtAndSaveChanges(User user,
 		bool? provideRefresh = null, bool? refreshJwtInBody = null)
 	{
+#if DEBUG
+		var debugVar1 = new UserInfo(user);
+#endif
 		// create access token using passed user model
 		var responseObj = new JwtResponse(_jwtService.GenerateAccessJwtToken(new UserInfo(user)));
 
@@ -99,7 +102,7 @@ public sealed class AuthController : ControllerBase
 			var parsed = _jwtService.ValidateJwtToken(refreshJwt);
 			jwtId = int.Parse(parsed.FindFirstValue(nameof(RefreshToken.Id))!);
 		} catch {
-			return (null,null, BadRequest("Refresh JWT is invalid."));
+			return (null, null, BadRequest("Refresh JWT is invalid."));
 		}
 
 		// Check JWT in database
@@ -124,12 +127,12 @@ public sealed class AuthController : ControllerBase
 	}
 
 
-		/* Метод валидирует переденные емаил и пароль.
-		 * В ответ создаются refresh & access токены.
-		 * Refresh может быть записан в тело, если передан
-		 * соответствующий параметр.
-		 */
-		[HttpPost]
+	/* Метод валидирует переденные емаил и пароль.
+	 * В ответ создаются refresh & access токены.
+	 * Refresh может быть записан в тело, если передан
+	 * соответствующий параметр.
+	 */
+	[HttpPost]
 	public async Task<IActionResult> Login(
 	[FromBody][Required] LoginRequest request,
 	[FromQuery] bool? provideRefresh = true,

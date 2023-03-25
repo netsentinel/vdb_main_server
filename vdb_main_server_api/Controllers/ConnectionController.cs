@@ -5,6 +5,7 @@ using main_server_api.Models.UserApi.Application.Device;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using vdb_main_server_api.Services;
 
@@ -23,7 +24,7 @@ public class ConnectionController : ControllerBase
 	}
 
 	[HttpPut]
-	public async Task<IActionResult> ConnectToNode(ConnectDeviceRequest request)
+	public async Task<IActionResult> ConnectToNode([FromBody][Required] ConnectDeviceRequest request)
 	{
 		int userId;
 		try {

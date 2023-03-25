@@ -28,7 +28,7 @@ public class SettingsProviderService
 			var result = _configuration.GetSection(nameof(JwtServiceSettings))
 				.Get<JwtServiceSettings>() ?? new();
 
-			if(_environment.GENERATE_JWT_SIG ?? false) {
+			if(_environment.JWT_SIGNING_KEY_B64 is not null) {
 				// it is ok if null will throw somewhere later
 				result.SigningKeyBase64 = _environment.JWT_SIGNING_KEY_B64!;
 			}
