@@ -20,8 +20,7 @@ public class VpnContext : DbContext
 	}
 
 	public DbSet<User> Users { get; protected set; }
-	public DbSet<UserDevice> UserDevices { get; protected set; }
-	public DbSet<RefreshToken> RefreshTokens { get; protected set; }
+	public DbSet<UserDevice> Devices { get; protected set; }
 
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{
@@ -30,6 +29,10 @@ public class VpnContext : DbContext
 		modelBuilder.Entity<User>(entity =>
 		{
 			entity.HasAlternateKey(u => u.Email);
+		});
+
+		modelBuilder.Entity<UserDevice>(entity => {
+			entity.HasAlternateKey(u => u.WireguardPublicKey);
 		});
 	}
 }

@@ -17,11 +17,13 @@ using vdb_main_server_api.Services;
 namespace main_server_api.Controllers;
 
 
+// LAST REVIEW: 2023-03-25 18:27 +03 
+
 [AllowAnonymous]
 [Route("api/[controller]")]
 public sealed class AuthController : ControllerBase
 {
-	private const string JwtRefreshTokenCookieName = "jwt_refresh_token";
+	private const string JwtRefreshTokenCookieName = @"jwt_refresh_token";
 
 	private readonly VpnContext _context;
 	private readonly JwtService _jwtService;
@@ -33,6 +35,7 @@ public sealed class AuthController : ControllerBase
 		_jwtService = jwtService;
 	}
 
+
 	// Метод возвращает OkResult, сигнализируя, что авторизация пользователя возможна.
 	[HttpGet]
 	[Authorize]
@@ -42,88 +45,107 @@ public sealed class AuthController : ControllerBase
 	/* Метод служит для генерации access & refresh JWT.
 	 * Access генерируется в любом случае.
 	 * Refresh генерируется в случае provideRefresh = true.
+	 * 
 	 * Твик refreshJwtInBody определяется, будет ли refresh JWT возвращен
 	 * внутри responseObj для дальней записи в body ответа, либо будет
 	 * сразу же записан в куки ответа (HTTP-Only & TLS-Only).
+	 * 
+	 * Метод добавляет токен в переданную модель user, 
+	 * но не выполняет SaveChanges.
 	 */
 	[NonAction]
-	public async Task<JwtResponse> IssueJwtAndSaveChanges(User user,
-		bool? provideRefresh = null, bool? refreshJwtInBody = null)
+	public JwtResponse IssueJwtAndAddToUser(User user, bool provideRefresh = true, bool refreshJwtInBody = false)
 	{
-#if DEBUG
-		var debugVar1 = new UserInfo(user);
-#endif
 		// create access token using passed user model
 		var responseObj = new JwtResponse(_jwtService.GenerateAccessJwtToken(new UserInfo(user)));
+		if(!provideRefresh) return responseObj;
 
-		if(!(provideRefresh ?? true)) {
-			return responseObj;
+
+		// is there too much tokens already? then just trim a half
+		if(user.RefreshTokensEntropies.Count > byte.MaxValue / 8) {
+			user.RefreshTokensEntropies = user.RefreshTokensEntropies
+				.Skip(user.RefreshTokensEntropies.Count / 2)
+				.ToList();
 		}
 
-		// create new refresh for inserting into DB
+		// create new refresh token for inserting into DB
 		var issuedTokenRecord = new RefreshToken {
 			IssuedToUser = user.Id,
-			ValidUntilUtc = DateTime.UtcNow.Add(_jwtService.RefreshTokenLifespan)
+			Entropy = Random.Shared.NextInt64(long.MinValue, long.MaxValue)
 		};
-		_context.RefreshTokens.Add(issuedTokenRecord);
-		// SaveChanges MUST be performed for Id field appearence 
-		await _context.SaveChangesAsync();
 
-		// create refresh token
+		// write refresh token
 		var refreshToken = _jwtService.GenerateRefreshJwtToken(issuedTokenRecord);
 
-		// where to place token?
-		if(refreshJwtInBody ?? false) {
+		// decide where to place refresh token
+		if(refreshJwtInBody) {
 			responseObj.RefreshToken = refreshToken;
 		} else {
-			// is static is not inited yet
+			// if static is not inited yet
 			if(_jwtCookieOptions is null) {
 				_jwtCookieOptions = new CookieOptions() {
 #if RELEASE
 					HttpOnly = true,
 					Secure = true,
-#endif
-					MaxAge = _jwtService.RefreshTokenLifespan,
 					SameSite = SameSiteMode.Strict,
+#endif
+					MaxAge = _jwtService.RefreshTokenLifespan
 				};
 			}
 			Response.Cookies.Append(JwtRefreshTokenCookieName, refreshToken, _jwtCookieOptions);
 		}
 
+		user.RefreshTokensEntropies.Add(issuedTokenRecord.Entropy);
 		return responseObj;
 	}
 
+
+	/* Метод валидирует refresh-JWT и находит связанного с ним юзверя.
+	 * 
+	 * Метод вносит изменения в модель (удаляет токен),
+	 * но не выполняет SaveChanges.
+	 */
 	[NonAction]
-	public async Task<(RefreshToken? foundToken, User? foundUser, IActionResult? errorResult)> ParseRefreshJwtAndFindUser(string refreshJwt)
+	public async Task<(User? foundUserAsTracking, IActionResult? errorResult)> ValidateAndRemoveRefreshJWT(string refreshJwt)
 	{
 		// validate JWT format and extract value
-		int jwtId;
+		int userId;
+		long jwtEntropy;
 		try {
 			var parsed = _jwtService.ValidateJwtToken(refreshJwt);
-			jwtId = int.Parse(parsed.FindFirstValue(nameof(RefreshToken.Id))!);
+			userId = int.Parse(parsed.FindFirstValue(nameof(RefreshToken.IssuedToUser))!);
+			jwtEntropy = long.Parse(parsed.FindFirstValue(nameof(RefreshToken.Entropy))!);
 		} catch {
-			return (null, null, BadRequest("Refresh JWT is invalid."));
+			return (null, BadRequest(ErrorMessages.RefreshJwtIsInvalid));
 		}
 
-		// Check JWT in database
-		var foundToken = await _context.RefreshTokens.AsTracking()
-			.FirstOrDefaultAsync(x => x.Id == jwtId);
-
-		if(foundToken is null) {
-			return (null, null, Unauthorized("Refresh JWT is not found on the server."));
-		}
-
-		// Find the user
-		var foundUser = await _context.Users.AsNoTracking()
-			.FirstOrDefaultAsync(x => x.Id == foundToken.IssuedToUser);
-
+		// find user in database
+		var foundUser = await _context.Users.AsTracking()
+			.FirstOrDefaultAsync(x => x.Id == userId);
 		if(foundUser is null) {
-			return (null, null, Problem(
-				"Refresh JWT is valid but the user it was issued to is not found on the server.",
-				statusCode: StatusCodes.Status410Gone));
+			/* RFC 9110 https://www.rfc-editor.org/rfc/rfc9110.html#name-422-unprocessable-content
+			 * 15.5.21. 422 Unprocessable Content
+			 * The 422 (Unprocessable Content) status code indicates that 
+			 * the server understands the content type of the request content 
+			 * (hence a 415 (Unsupported Media Type) status code is inappropriate), 
+			 * and the syntax of the request content is correct, but it was unable 
+			 * to process the contained instructions. For example, this status code 
+			 * can be sent if an XML request content contains well-formed (i.e., syntactically correct), 
+			 * but semantically erroneous XML instructions.
+			 */
+			return (null, UnprocessableEntity(ErrorMessages.RefreshJwtUserNotFound));
 		}
 
-		return (foundToken, foundUser, null);
+		// find jwt in user collection
+		if(!foundUser.RefreshTokensEntropies.Contains(jwtEntropy)) {
+			return (foundUser, Unauthorized(ErrorMessages.RefreshJwtIsNotFound));
+		}
+
+		// remove used jwt
+		foundUser.RefreshTokensEntropies.Remove(jwtEntropy);
+
+		// return associated user
+		return (foundUser, null);
 	}
 
 
@@ -135,11 +157,17 @@ public sealed class AuthController : ControllerBase
 	[HttpPost]
 	public async Task<IActionResult> Login(
 	[FromBody][Required] LoginRequest request,
-	[FromQuery] bool? provideRefresh = true,
-	[FromQuery] bool? refreshJwtInBody = false)
+	[FromQuery] bool provideRefresh = true,
+	[FromQuery] bool refreshJwtInBody = false)
 	{
-		var found = await _context.Users.AsNoTracking()
-			.FirstOrDefaultAsync(x => x.Email == request.Email);
+		User? found;
+		if(provideRefresh) { // as tracking if refresh is need to be saved
+			found = await _context.Users.AsTracking()
+				.FirstOrDefaultAsync(x => x.Email == request.Email);
+		} else {
+			found = await _context.Users.AsNoTracking()
+				.FirstOrDefaultAsync(x => x.Email == request.Email);
+		}
 
 		if(found is null) {
 			return NotFound(nameof(request.Email));
@@ -149,7 +177,12 @@ public sealed class AuthController : ControllerBase
 			return Unauthorized(nameof(request.Password));
 		}
 
-		return Ok(await IssueJwtAndSaveChanges(found, provideRefresh, refreshJwtInBody));
+		var jwt = IssueJwtAndAddToUser(found, provideRefresh, refreshJwtInBody);
+		if(provideRefresh) {
+			await _context.SaveChangesAsync();
+		}
+
+		return Ok(jwt);
 	}
 
 	/* Метод регистрирует пользователя.
@@ -160,38 +193,49 @@ public sealed class AuthController : ControllerBase
 	[HttpPut]
 	public async Task<IActionResult> Register(
 		[FromBody][Required] RegistrationRequest request,
-		[FromQuery] bool? redirectToLogin = true,
-		[FromQuery] bool? provideRefresh = null,
-		[FromQuery] bool? refreshJwtInBody = null)
+		[FromQuery] bool redirectToLogin = true,
+		[FromQuery] bool provideRefresh = true,
+		[FromQuery] bool refreshJwtInBody = false)
 	{
-		// user already exists
+		// if user already exists
 		if(await _context.Users.AnyAsync(x => x.Email.Equals(request.Email))) {
-			if(redirectToLogin ?? true) {
+			if(redirectToLogin) { // just redirect to login?
 				return await Login(request, provideRefresh, refreshJwtInBody);
-			} else {
+			} else { // or tell him to fuck off?
 				return Conflict(nameof(request.Email));
 			}
 		}
 
 		// create password hash
 		var passHash = PasswordsService.HashPassword(request.Password, out var passSalt);
+		// create user
 		var toAdd = new User {
+			// basic user part
 			Email = request.Email,
 			PasswordSalt = passSalt,
 			PasswordHash = passHash,
 			IsAdmin = false,
 			IsEmailConfirmed = false,
 			PayedUntil = DateTime.MinValue,
-			UserDevicesIds = new(0)
+			// other part
+			RefreshTokensEntropies = new(0),
 		};
 
 		_context.Users.Add(toAdd);
 		await _context.SaveChangesAsync();
+
+		/* let the Login endpoint generate JWTs, moreover 
+		 * it will validate registration succeeded
+		 */
 		return await Login(request, provideRefresh, refreshJwtInBody);
 	}
 
 
-	[HttpPatch]
+	/* Данный метод должен выдавать юзверю новые JWT.
+	 * Refresh может быть перед как в куках, так и в теле,
+	 * но не в обоих местах.
+	 */
+	[HttpPatch] // yeah, prohibiting body in HttpDelete was a great decision! now try to pass a base64 there, the genuis you are, HTTP creator!
 	[Route("")]
 	[Route("refresh")]
 	public async Task<IActionResult> RenewJwt([FromBody] RefreshJwtRequest? request)
@@ -210,19 +254,20 @@ public sealed class AuthController : ControllerBase
 			jwt = fromBody;
 			refreshJwtInBody = true;
 		} else {
-			return BadRequest(
-				"Refresh JWT must be provided in cookies OR request body strictly.");
+			return BadRequest(ErrorMessages.RefreshJwtIsExpectedInCookiesXorBody);
 		}
 
-		var (foundToken, foundUser, errorResult) = await ParseRefreshJwtAndFindUser(jwt);
-		if(errorResult is not null) { // foundToken, foundUser is guaranteed to be not null
+		var (foundUserAsTracking, errorResult) = await ValidateAndRemoveRefreshJWT(jwt);
+		if(errorResult is not null) {
 			return errorResult;
 		}
 
-		// Remove used JWT
-		_context.RefreshTokens.Remove(foundToken!);
-		return Ok(await IssueJwtAndSaveChanges(foundUser!, true, refreshJwtInBody));
+		// foundUser is guaranteed to be not null IF errorResult is null
+		var newToken = IssueJwtAndAddToUser(foundUserAsTracking!, true, refreshJwtInBody);
+		await _context.SaveChangesAsync();
+		return Ok(newToken);
 	}
+
 
 	/* Данное действие следует применять только с refresh-токеном из Http-only.
 	 * Оно предполагает удаление всех refresh токенов данного юзера из базы данных.
@@ -233,17 +278,18 @@ public sealed class AuthController : ControllerBase
 		var refreshJwt = Request.Cookies[JwtRefreshTokenCookieName];
 
 		if(refreshJwt is null) {
-			return BadRequest(
-				"Refresh JWT must be provided in cookies strictly.");
+			return BadRequest(ErrorMessages.RefreshJwtIsExpectedInCookies);
 		}
 
-		var (foundToken, foundUser, errorResult) = await ParseRefreshJwtAndFindUser(refreshJwt);
-		if(errorResult is not null) { // foundToken, foundUser is guaranteed to be not null
+		var (foundUserAsTracking, errorResult) = await ValidateAndRemoveRefreshJWT(refreshJwt);
+		if(errorResult is not null) {
 			return errorResult;
 		}
 
-		await _context.RefreshTokens.Where(t => t.IssuedToUser == foundToken!.IssuedToUser).ExecuteDeleteAsync();
-
-		return Ok(await IssueJwtAndSaveChanges(foundUser!, true, false));
+		// foundUser is guaranteed to be not null IF errorResult is null
+		foundUserAsTracking!.RefreshTokensEntropies = new(1);
+		var newToken = IssueJwtAndAddToUser(foundUserAsTracking!);
+		await _context.SaveChangesAsync();
+		return Ok(newToken);
 	}
 }

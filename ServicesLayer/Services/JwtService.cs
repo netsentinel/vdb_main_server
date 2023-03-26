@@ -1,5 +1,4 @@
-﻿using DataAccessLayer.Models;
-using main_server_api.Models.UserApi.Website.Common;
+﻿using main_server_api.Models.UserApi.Website.Common;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -69,7 +68,6 @@ public sealed class JwtService
 			new Claim(nameof(user.IsAdmin), user.IsAdmin.ToString()),
 			new Claim(nameof(user.Email), user.Email),
 			new Claim(nameof(user.IsEmailConfirmed),user.IsEmailConfirmed.ToString()),
-			new Claim(nameof(user.UserDevicesIds), Utf8Json.JsonSerializer.ToJsonString(user.UserDevicesIds)),
 			new Claim(nameof(user.PayedUntilUtc), user.PayedUntilUtc.ToString("o")) // 'o' format provider satisfies ISO 8601
 		});
 	}
@@ -77,7 +75,9 @@ public sealed class JwtService
 	public string GenerateRefreshJwtToken(RefreshToken token)
 	{
 		return GenerateJwtToken(new[] {
-			new Claim(nameof(token.Id), token.Id.ToString()) }, RefreshTokenLifespan);
+			new Claim(nameof(token.IssuedToUser), token.IssuedToUser.ToString()),
+			new Claim(nameof(token.Entropy),token.Entropy.ToString()),
+			}, RefreshTokenLifespan);
 	}
 	#endregion
 }

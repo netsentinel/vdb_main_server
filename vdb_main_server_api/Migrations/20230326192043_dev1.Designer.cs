@@ -13,8 +13,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace main_server_api.Migrations
 {
     [DbContext(typeof(VpnContext))]
-    [Migration("20230322201010_init2")]
-    partial class init2
+    [Migration("20230326192043_dev1")]
+    partial class dev1
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -25,25 +25,6 @@ namespace main_server_api.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("DataAccessLayer.Models.RefreshToken", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
-
-                    b.Property<int>("IssuedToUser")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("ValidUntilUtc")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("RefreshTokens");
-                });
 
             modelBuilder.Entity("DataAccessLayer.Models.User", b =>
                 {
@@ -77,7 +58,7 @@ namespace main_server_api.Migrations
                     b.Property<DateTime>("PayedUntil")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<List<long>>("UserDevicesIds")
+                    b.Property<List<long>>("RefreshTokensEntropies")
                         .IsRequired()
                         .HasColumnType("bigint[]");
 
@@ -99,14 +80,22 @@ namespace main_server_api.Migrations
                     b.Property<int?>("LastConnectedNodeId")
                         .HasColumnType("integer");
 
-                    b.Property<string>("WgPubkey")
+                    b.Property<DateTime?>("LastSeenUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("WireguardPublicKey")
                         .IsRequired()
                         .HasMaxLength(45)
                         .HasColumnType("character varying(45)");
 
                     b.HasKey("Id");
 
-                    b.ToTable("UserDevices");
+                    b.HasAlternateKey("WireguardPublicKey");
+
+                    b.ToTable("Devices");
                 });
 #pragma warning restore 612, 618
         }

@@ -10,7 +10,6 @@ public class UserInfo
 	public bool IsAdmin { get; init; }
 	public string Email { get; init; }
 	public bool IsEmailConfirmed { get; init; }
-	public List<long> UserDevicesIds { get; init; }
 	public DateTime PayedUntilUtc { get; init; }
 
 
@@ -20,7 +19,6 @@ public class UserInfo
 		this.IsAdmin = source.IsAdmin;
 		this.Email = source.Email;
 		this.IsEmailConfirmed = source.IsEmailConfirmed;
-		this.UserDevicesIds = source.UserDevicesIds;
 		this.PayedUntilUtc = source.PayedUntil;
 	}
 }

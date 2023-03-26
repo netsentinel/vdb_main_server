@@ -8,38 +8,26 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace main_server_api.Migrations
 {
     /// <inheritdoc />
-    public partial class init : Migration
+    public partial class dev1 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "RefreshTokens",
+                name: "Devices",
                 columns: table => new
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    IssuedToUser = table.Column<int>(type: "integer", nullable: false),
-                    ValidUntilUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    UserId = table.Column<int>(type: "integer", nullable: false),
+                    WireguardPublicKey = table.Column<string>(type: "character varying(45)", maxLength: 45, nullable: false),
+                    LastConnectedNodeId = table.Column<int>(type: "integer", nullable: true),
+                    LastSeenUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_RefreshTokens", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "UserDevices",
-                columns: table => new
-                {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    DeviceId = table.Column<int>(type: "integer", nullable: false),
-                    WgPubkey = table.Column<string>(type: "character varying(45)", maxLength: 45, nullable: false),
-                    LastConnectedNodeId = table.Column<int>(type: "integer", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_UserDevices", x => x.Id);
+                    table.PrimaryKey("PK_Devices", x => x.Id);
+                    table.UniqueConstraint("AK_Devices_WireguardPublicKey", x => x.WireguardPublicKey);
                 });
 
             migrationBuilder.CreateTable(
@@ -53,8 +41,8 @@ namespace main_server_api.Migrations
                     IsEmailConfirmed = table.Column<bool>(type: "boolean", nullable: false),
                     PasswordSalt = table.Column<byte[]>(type: "bytea", maxLength: 64, nullable: false),
                     PasswordHash = table.Column<byte[]>(type: "bytea", maxLength: 64, nullable: false),
-                    UserDevicesIds = table.Column<List<int>>(type: "integer[]", nullable: false),
-                    PayedUntil = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    PayedUntil = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    RefreshTokensEntropies = table.Column<List<long>>(type: "bigint[]", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -67,10 +55,7 @@ namespace main_server_api.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "RefreshTokens");
-
-            migrationBuilder.DropTable(
-                name: "UserDevices");
+                name: "Devices");
 
             migrationBuilder.DropTable(
                 name: "Users");

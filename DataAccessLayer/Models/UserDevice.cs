@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Text;
 
 namespace DataAccessLayer.Models;
 
@@ -22,8 +23,16 @@ public class UserDevice
 	private const int LengthOfBase64For512Bits = ((512 / 8) * 4 / 3) + 3;
 
 
+
+	public string GenerateDeviceName()
+	{
+		var bytes = Encoding.UTF8.GetBytes(this.WireguardPublicKey, 0, 4);
+		return (bytes[0] + bytes[1] + bytes[2] + bytes[3]).ToString("000");
+	}
+
 	public long Id { get; set; }
-	[MaxLength(LengthOfBase64For256Bits)] public string WgPubkey { get; set; }
+	public int UserId { get; set; }
+	[MaxLength(LengthOfBase64For256Bits)] public string WireguardPublicKey { get; set; }
 	public int? LastConnectedNodeId { get; set; }
 	public DateTime? LastSeenUtc { get; set; }
 }

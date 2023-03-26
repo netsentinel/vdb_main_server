@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using System.ComponentModel.DataAnnotations;
-using System.Data.Entity;
 using System.Security.Claims;
 using vdb_main_server_api.Services;
 
@@ -20,7 +19,7 @@ namespace main_server_api.Controllers;
  * после чего использует свой access-токен для доступа сюда.
  * 
  * Endpoints:
- * PUT GetDevices - Список девайсов текущего юзера
+ * GET ListDevices - Список девайсов текущего юзера
  * 
  * PUT AddDevice(string wgPukey) => JwtDeviceResponse;
  */
@@ -29,123 +28,106 @@ namespace main_server_api.Controllers;
 public class DeviceController : ControllerBase
 {
 	private readonly VpnContext _context;
-	private readonly JwtService _jwtService;
+	private readonly VpnNodesService _nodesService;
 	private readonly DeviceControllerSettings _settings;
 	private readonly Dictionary<int, int> _accessLevelToDevicesLimit;
 	private static CookieOptions? _jwtCookieOptions;
 
 
-	public DeviceController(VpnContext context, JwtService jwtService, SettingsProviderService settingsProvider)
+	public DeviceController(VpnContext context, VpnNodesService nodesService, SettingsProviderService settingsProvider)
 	{
 		_context = context;
-		_jwtService = jwtService;
+		_nodesService = nodesService;
 		_settings = settingsProvider.DeviceControllerSettings;
 		_accessLevelToDevicesLimit = _settings.AccessLevelToMaxDevices?
 			.ToDictionary(x => x.AccessLevel, x => x.DevicesLimit) ?? new Dictionary<int, int>();
 	}
 
 	[NonAction]
-	public int GetDevicesLimitForUser(User user)
+	public int GetDevicesLimit(User.AccessLevels userAccessLevel)
 	{
-		var accessLevel = (int)user.GetAccessLevel();
+#if DEBUG
+		return short.MaxValue;
+#else
+		var accessLevel = (int)userAccessLevel;
 
-		if(_accessLevelToDevicesLimit.TryGetValue(accessLevel, out var limit)) {
-			return limit;
-		} else {
-			return accessLevel * 3 + 1;
-		}
+		return _accessLevelToDevicesLimit.TryGetValue(accessLevel, out var limit) ?
+			limit : accessLevel * 3 + 1; // lowest: 1, highest: 13
+#endif
 	}
 
 	[HttpGet]
 	public async Task<IActionResult> ListDevices()
 	{
-		var userId = int.Parse(Request.HttpContext.User.FindFirstValue(
-			nameof(UserInfo.Id))
-			?? throw new ArgumentNullException(nameof(UserInfo.Id)));
+		//var userId = this.ParseIdClaim();
+		//var devices = await _context.Devices.Where(x=> x.UserId== userId).ToListAsync();
+		//return Ok(devices);
 
-		await using var sqlConn = new NpgsqlConnection(_context.Database.GetDbConnection().ConnectionString);
-
-		// how should I f4k1n do this with EF ?? nested await ToListAsync(), wtf ?
-		var query = $"""
-			SELECT * FROM "{nameof(_context.UserDevices)}"
-			WHERE "{nameof(UserDevice.Id)}" IN ((
-				SELECT "{nameof(DataAccessLayer.Models.User.UserDevicesIds)}"
-				FROM "{nameof(_context.Users)}"
-				WHERE "{nameof(DataAccessLayer.Models.User.Id)}" = {userId}
-				LIMIT 1)[1])
-			""";
-		var result = await sqlConn.QueryAsync<UserDevice>(query);
-
-		return Ok(result);
+		return Ok(await _context.Devices
+			.Where(x => x.UserId == this.ParseIdClaim()).ToListAsync());
 	}
 
 	[HttpPut]
 	public async Task<IActionResult> AddNewDevice([FromBody][Required] AddDeviceRequest request)
 	{
-		if(!this.ValidatePubkey(request.WgPubkey, 256)) {
-			return BadRequest("Wireguard public key must be exact 256-bits long base64-encoded string.");
+		if(!this.ValidatePubkey(request.WgPubkey, 256 / 8)) {
+			return BadRequest(ErrorMessages.WireguardPublicKeyFormatInvalid);
 		}
 
-		var userEmail = Request.HttpContext.User.FindFirstValue(
-			nameof(DataAccessLayer.Models.User.Email))
-			?? throw new ArgumentNullException(nameof(DataAccessLayer.Models.User.Email));
-
-		var found = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmail);
-		if(found is null) {
-			return Problem(
-				"Access JWT is valid but the user it was issued to is not found on the server.",
-				statusCode: StatusCodes.Status410Gone);
+		if(await _context.Devices.AnyAsync(x => x.WireguardPublicKey == request.WgPubkey)) {
+			return Conflict(ErrorMessages.WireguardPublicKeyAlreadyExists);
 		}
 
-		if(found.UserDevicesIds.Count >= GetDevicesLimitForUser(found)) {
-			return Conflict("Devices limit reached.");
+		var userId = this.ParseIdClaim();
+		var userAccessLevel= (await _context.Users.AsNoTracking()
+			.FirstOrDefaultAsync(x=> x.Id== userId))?.GetAccessLevel();
+
+		if(userAccessLevel is null) {
+			return UnprocessableEntity(ErrorMessages.AccessJwtUserNotFound);
 		}
 
-		var userDevice = new UserDevice { WgPubkey = request.WgPubkey };
-		_context.UserDevices.Add(userDevice);
+		var devicesCount = await _context.Devices.CountAsync(x => x.UserId == userId);
+		if(devicesCount >= GetDevicesLimit(userAccessLevel.Value)) {
+			return Conflict(ErrorMessages.DevicesLimitReached);
+		}
+
+		var added = _context.Devices.Add(new UserDevice {
+			UserId = userId,
+			WireguardPublicKey = request.WgPubkey,
+			LastConnectedNodeId = null,
+			LastSeenUtc = DateTime.UtcNow
+		});
+
 		await _context.SaveChangesAsync();
-		found.UserDevicesIds.Add(userDevice.Id);
-		await _context.SaveChangesAsync();
-
-		return Ok(new AddDeviceResponse { Id = userDevice.Id });
+		return StatusCode(StatusCodes.Status201Created);
 	}
 
-	[HttpPatch]
-	public async Task<IActionResult> PatchDevicePubkey([FromBody][Required] PatchDeviceRequest request)
-	{
-		throw new NotImplementedException();
-	}
 
 	/* RFC 3986
 	 * The query component contains non-hierarchical data that, along 
-	 * with data in the path component, serves to identify a resource.
+	 * with data in the path component, serves to identify a resource. But... 
+	 * base64-encoded wg pubkey in url?
 	 */
-	[HttpDelete]
-	public async Task<IActionResult> DeleteDevice([FromQuery][Required] int deviceId)
+	[HttpPatch]
+	public async Task<IActionResult> DeleteDevice([FromBody][Required] PatchDeviceRequest request)
 	{
-		int userId;
-		try {
-			userId = int.Parse(Request.HttpContext.User.FindFirstValue(
-				nameof(Models.UserApi.Website.Common.UserInfo.Id))!);
-		} catch {
-			return BadRequest("Access JWT is invalid.");
-		}
+		int userId = this.ParseIdClaim();
+		var toDelete = await _context.Devices.FirstOrDefaultAsync(d =>
+			d.WireguardPublicKey == request.WgPubkey && d.UserId == userId);
 
-		var found = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
-		if(found is null) {
-			return Problem(
-				"Access JWT is valid but the user it was issued to is not found on the server.",
-				statusCode: StatusCodes.Status410Gone);
-		}
-
-		if(!found.UserDevicesIds.Contains(deviceId)) {
+		if(toDelete is null) {
 			return NotFound();
 		}
 
-		found.UserDevicesIds.Remove(deviceId);
-		await _context.UserDevices.Where(x => x.Id == deviceId).ExecuteDeleteAsync();
+		if(toDelete.LastConnectedNodeId is not null) {
+			// not awaited, fire-and-forget
+			_ = _nodesService.RemovePeerFromNode(
+				toDelete.WireguardPublicKey, toDelete.LastConnectedNodeId.Value);
+		}
+
+		_context.Remove(toDelete);
 		await _context.SaveChangesAsync();
 
-		return Ok();
+		return Accepted(); // because we did not awaited one of the calls above 
 	}
 }

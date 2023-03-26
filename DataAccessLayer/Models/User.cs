@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Text;
 
 namespace DataAccessLayer.Models;
 
@@ -35,20 +36,22 @@ public class User
 
 	public AccessLevels GetAccessLevel()
 	{
-		if (this.IsAdmin) return AccessLevels.Admin;
-		if (this.PayedUntil > DateTime.UtcNow) return AccessLevels.Payed;
-		if (this.IsEmailConfirmed) return AccessLevels.Free;
+		if(this.IsAdmin) return AccessLevels.Admin;
+		if(this.PayedUntil > DateTime.UtcNow) return AccessLevels.Payed;
+		if(this.IsEmailConfirmed) return AccessLevels.Free;
 
 		return AccessLevels.Unconfirmed;
 	}
 
-
-	public int Id { get; set; }
-	[DefaultValue(false)] public bool IsAdmin { get; set; } = false;
-	[MaxLength(50)] public string Email { get; set; }
-	[DefaultValue(false)] public bool IsEmailConfirmed { get; set; } = false;
-	[MaxLength(512/8)] public byte[] PasswordSalt { get; set; }
-	[MaxLength(512 / 8)] public byte[] PasswordHash { get; set; }
-	public List<long> UserDevicesIds { get; set; } // Foreign Keys for UserDevice model
+	#region basic part
+	[Key] public int Id { get; set; } // primery key
+	[DefaultValue(false)] public bool IsAdmin { get; set; } = false; // is used admin?
+	[MaxLength(50)] public string Email { get; set; } = string.Empty; // email string
+	[DefaultValue(false)] public bool IsEmailConfirmed { get; set; } = false; // is email confirmed?
+	[MaxLength(512 / 8)] public byte[] PasswordSalt { get; set; } = null!;
+	[MaxLength(512 / 8)] public byte[] PasswordHash { get; set; } = null!;
 	[DefaultValue(0)] public DateTime PayedUntil { get; set; } = DateTime.MinValue;
+	#endregion
+
+	public List<long> RefreshTokensEntropies { get; set; } = null!;
 }
