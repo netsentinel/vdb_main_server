@@ -18,3 +18,7 @@
     - **VDB_GENERATE_JWT_SIG** - generate random JWT signing key on container first run.
         - Valid range: true/false.
         - Default: true.
+
+## Full list of listened ports
+- **5001** - nginx-to-api HTTP2 TLS-self-signed port.
+- **5002** - nginx-to-api no-TLS port.
