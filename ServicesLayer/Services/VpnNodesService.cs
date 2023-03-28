@@ -176,7 +176,7 @@ public sealed class VpnNodesService : BackgroundService
 			var response = await httpClient.PutAsync(GetPeersPathForNode(nodeInfo),
 				JsonContent.Create(new PeerActionRequest(peerPubkey), options: _defaultJsonOptions));
 
-			return response.StatusCode != HttpStatusCode.OK ? null :
+			return !response.IsSuccessStatusCode ? null :
 				await response.Content.ReadFromJsonAsync<AddPeerResponse>(_defaultJsonOptions);
 		}
 		catch (HttpRequestException)

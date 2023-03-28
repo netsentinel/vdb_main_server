@@ -5,10 +5,11 @@ namespace vdb_main_server_api.Services;
 public sealed class EnvironmentProvider
 {
 	// there is no need to access this variable's value from the code, it's just a reminder
-	private const string ENV_GENERATE_JWT_SIG = "VDB_GENERATE_JWT_SIG"; 
+	private const string ENV_GENERATE_JWT_SIG = "VDB_GENERATE_JWT_SIG";
 	private const string ENV_JWT_SIGNING_KEY_B64 = "VDB_JWT_SIGNING_KEY";
 
 
+	[Obsolete]
 	public string? JWT_SIGNING_KEY_B64 { get; init; } = null;
 
 

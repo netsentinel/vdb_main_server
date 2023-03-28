@@ -14,6 +14,9 @@ namespace main_server_api.Controllers;
 
 [Authorize]
 [Route("api/[controller]")]
+[ApiController]
+[Consumes("application/json")]
+[Produces("application/json")]
 public class ConnectionController : ControllerBase
 {
 	private readonly VpnContext _context;
@@ -65,9 +68,6 @@ public class ConnectionController : ControllerBase
 	{
 		int userId = this.ParseIdClaim();
 
-		var foundUserTracked = await _context.Users.AsTracking()
-			.Where(u => u.Id == userId).FirstOrDefaultAsync();
-
 		var foundDevice = _context.Devices.Where(x => x.UserId == this.ParseIdClaim())
 			.FirstOrDefault(x => x.WireguardPublicKey == request.WireguardPubkey)
 			?? default;
@@ -78,7 +78,8 @@ public class ConnectionController : ControllerBase
 		}
 
 		// ensure disconnected from prev node
-		if(foundDevice.LastConnectedNodeId is not null) {
+		if(foundDevice.LastConnectedNodeId is not null 
+			&& foundDevice.LastConnectedNodeId!=request.NodeId) {
 			try {
 				// not awaited, fire-and-forget
 				_ = _nodesService.RemovePeerFromNode(
@@ -99,6 +100,6 @@ public class ConnectionController : ControllerBase
 				foundDevice.WireguardPublicKey, foundDevice.LastConnectedNodeId.Value);
 		}
 
-		return Problem();
+		return StatusCode(StatusCodes.Status500InternalServerError);
 	}
 }

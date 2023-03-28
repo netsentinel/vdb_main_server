@@ -23,4 +23,3 @@ public static class ErrorMessages
 	public const string DevicesLimitReached =
 		@"Devices limit reached.";
 }
-

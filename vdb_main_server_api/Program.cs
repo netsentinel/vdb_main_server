@@ -19,7 +19,7 @@ internal class Program
 		builder.Configuration
 			.AddJsonFile("./appsettings.json", true)
 			.AddJsonFile("/run/secrets/aspsecrets.json", true)
-			.AddJsonFile("/run/secrets/generated_sig.json",true)
+			.AddJsonFile("/run/secrets/generated_sig.json", true)
 			.AddEnvironmentVariables()
 			.Build();
 
@@ -34,8 +34,8 @@ internal class Program
 			var env = new EnvironmentProvider(null);
 			opts.TokenValidationParameters = new TokenValidationParameters {
 				ValidateIssuerSigningKey = true,
-				IssuerSigningKey = new SymmetricSecurityKey(Convert.FromBase64String(env.JWT_SIGNING_KEY_B64
-				?? builder.Configuration["JwtServiceSettings:SigningKeyBase64"]!)), // ok to throw here
+				IssuerSigningKey = new SymmetricSecurityKey(Convert.FromBase64String(
+					builder.Configuration["JwtServiceSettings:SigningKeyBase64"]!)), // ok to throw here
 				ValidateAudience = false,
 				ValidateIssuer = false,
 			};
@@ -57,9 +57,10 @@ internal class Program
 
 
 		builder.Services.AddDbContext<VpnContext>(opts => {
-			opts.UseNpgsql(builder.Configuration["ConnectionStrings:DefaultConnection"], opts => {
-				opts.MigrationsAssembly(nameof(main_server_api));
-			});
+			opts.UseNpgsql(builder.Environment.IsDevelopment()
+				? builder.Configuration["ConnectionStrings:LocalhostConnection"]
+				: builder.Configuration["ConnectionStrings:DatabaseConnection"]
+				, opts => { opts.MigrationsAssembly(nameof(main_server_api)); });
 		});
 
 
@@ -86,7 +87,7 @@ internal class Program
 		app.UseAuthorization();
 		app.MapControllers();
 
-
+		app.Services.CreateScope().ServiceProvider.GetRequiredService<ILogger<Program>>().LogInformation($"Env: {app.Environment.EnvironmentName}");
 		app.Services.CreateScope().ServiceProvider.GetRequiredService<VpnContext>().Database.Migrate();
 		app.Run();
 	}

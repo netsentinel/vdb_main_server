@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace main_server_api.Migrations
 {
     [DbContext(typeof(VpnContext))]
-    [Migration("20230326192043_dev1")]
+    [Migration("20230328220655_dev1")]
     partial class dev1
     {
         /// <inheritdoc />

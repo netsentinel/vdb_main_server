@@ -25,6 +25,9 @@ namespace main_server_api.Controllers;
  */
 [Authorize]
 [Route("api/[controller]")]
+[ApiController]
+[Consumes("application/json")]
+[Produces("application/json")]
 public class DeviceController : ControllerBase
 {
 	private readonly VpnContext _context;
@@ -47,7 +50,7 @@ public class DeviceController : ControllerBase
 	public int GetDevicesLimit(User.AccessLevels userAccessLevel)
 	{
 #if DEBUG
-		return short.MaxValue;
+		return ushort.MaxValue*10;
 #else
 		var accessLevel = (int)userAccessLevel;
 
@@ -59,10 +62,6 @@ public class DeviceController : ControllerBase
 	[HttpGet]
 	public async Task<IActionResult> ListDevices()
 	{
-		//var userId = this.ParseIdClaim();
-		//var devices = await _context.Devices.Where(x=> x.UserId== userId).ToListAsync();
-		//return Ok(devices);
-
 		return Ok(await _context.Devices
 			.Where(x => x.UserId == this.ParseIdClaim()).ToListAsync());
 	}

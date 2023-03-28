@@ -1,5 +1,6 @@
 ﻿using main_server_api.Models.Runtime;
 using Microsoft.Extensions.Configuration;
+using ServicesLayer.Models.Runtime;
 using vdb_main_server_api.Models.Runtime;
 
 namespace vdb_main_server_api.Services;
@@ -21,16 +22,16 @@ public class SettingsProviderService
 		_configuration.GetSection(nameof(VpnNodesServiceSettings))
 		.Get<VpnNodesServiceSettings>() ?? new();
 
-	public virtual JwtServiceSettings JwtServiceSettings
-	{
-		get
-		{
+	public virtual JwtServiceSettings JwtServiceSettings {
+		get {
 			var result = _configuration.GetSection(nameof(JwtServiceSettings))
 				.Get<JwtServiceSettings>() ?? new();
 
-			if(_environment.JWT_SIGNING_KEY_B64 is not null) {
-				// it is ok if null will throw somewhere later
-				result.SigningKeyBase64 = _environment.JWT_SIGNING_KEY_B64!;
+			var generatedSig = _configuration.GetSection(nameof(GeneratedSigningKey))
+				.Get<GeneratedSigningKey>();
+
+			if(generatedSig is not null && !string.IsNullOrEmpty(generatedSig.SigningKeyBase64)) {
+				result.SigningKeyBase64 = generatedSig.SigningKeyBase64;
 			}
 
 			return result;

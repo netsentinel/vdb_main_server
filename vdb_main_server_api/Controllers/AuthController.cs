@@ -16,11 +16,11 @@ using vdb_main_server_api.Services;
 
 namespace main_server_api.Controllers;
 
-
-// LAST REVIEW: 2023-03-25 18:27 +03 
-
+[ApiController]
 [AllowAnonymous]
 [Route("api/[controller]")]
+[Consumes("application/json")]
+[Produces("application/json")]
 public sealed class AuthController : ControllerBase
 {
 	private const string JwtRefreshTokenCookieName = @"jwt_refresh_token";
