@@ -69,11 +69,11 @@ public class DeviceController : ControllerBase
 	[HttpPut]
 	public async Task<IActionResult> AddNewDevice([FromBody][Required] AddDeviceRequest request)
 	{
-		if(!this.ValidatePubkey(request.WgPubkey, 256 / 8)) {
+		if(!this.ValidatePubkey(request.WireguardPublicKey, 256 / 8)) {
 			return BadRequest(ErrorMessages.WireguardPublicKeyFormatInvalid);
 		}
 
-		if(await _context.Devices.AnyAsync(x => x.WireguardPublicKey == request.WgPubkey)) {
+		if(await _context.Devices.AnyAsync(x => x.WireguardPublicKey == request.WireguardPublicKey)) {
 			return Conflict(ErrorMessages.WireguardPublicKeyAlreadyExists);
 		}
 
@@ -92,7 +92,7 @@ public class DeviceController : ControllerBase
 
 		var added = _context.Devices.Add(new UserDevice {
 			UserId = userId,
-			WireguardPublicKey = request.WgPubkey,
+			WireguardPublicKey = request.WireguardPublicKey,
 			LastConnectedNodeId = null,
 			LastSeenUtc = DateTime.UtcNow
 		});
@@ -112,7 +112,7 @@ public class DeviceController : ControllerBase
 	{
 		int userId = this.ParseIdClaim();
 		var toDelete = await _context.Devices.FirstOrDefaultAsync(d =>
-			d.WireguardPublicKey == request.WgPubkey && d.UserId == userId);
+			d.WireguardPublicKey == request.WireguardPublicKey && d.UserId == userId);
 
 		if(toDelete is null) {
 			return NotFound();

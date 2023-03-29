@@ -1,9 +1,14 @@
 using DataAccessLayer.Contexts;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption.ConfigurationModel;
+using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using vdb_main_server_api.Services;
+using ServicesLayer.Services;
+
 
 #if DEBUG
 #endif
@@ -16,6 +21,12 @@ internal class Program
 	{
 		var builder = WebApplication.CreateBuilder(args);
 
+		builder.Services.AddDataProtection().UseCryptographicAlgorithms(
+			new AuthenticatedEncryptorConfiguration {
+				EncryptionAlgorithm = EncryptionAlgorithm.AES_256_GCM,
+				ValidationAlgorithm = ValidationAlgorithm.HMACSHA512
+			});
+
 		builder.Configuration
 			.AddJsonFile("./appsettings.json", true)
 			.AddJsonFile("/run/secrets/aspsecrets.json", true)
@@ -24,6 +35,7 @@ internal class Program
 			.Build();
 
 		builder.Logging.AddConsole();
+
 		builder.Services.AddControllers();
 		builder.Services.AddAuthentication(opts => {
 			opts.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -34,27 +46,29 @@ internal class Program
 			var env = new EnvironmentProvider(null);
 			opts.TokenValidationParameters = new TokenValidationParameters {
 				ValidateIssuerSigningKey = true,
+				/* echo "{\"GeneratedSigningKey\":{\"SigningKeyBase64\":
+				 * \"$(head -c 64 /dev/random | base64 -w 0)\"}}" 
+				 * > /run/secrets/generated_sig.json
+				 */
 				IssuerSigningKey = new SymmetricSecurityKey(Convert.FromBase64String(
-					builder.Configuration["JwtServiceSettings:SigningKeyBase64"]!)), // ok to throw here
+					builder.Configuration["GeneratedSigningKey:SigningKeyBase64"] ??
+					builder.Configuration["JwtServiceSettings:SigningKeyBase64"]!)), // ok to throw if null
 				ValidateAudience = false,
 				ValidateIssuer = false,
 			};
-		}
-		);
+		});
 
-#if DEBUG
-		if (builder.Environment.IsDevelopment())
-		{
+		if(builder.Environment.IsDevelopment()) {
 			builder.Services.AddSwaggerGen();
 		}
-#endif
 
 		builder.Services.AddSingleton<EnvironmentProvider>();
 		builder.Services.AddSingleton<SettingsProviderService>();
 		builder.Services.AddSingleton<JwtService>();
 		builder.Services.AddSingleton<VpnNodesService>();
 		builder.Services.AddHostedService(pr => pr.GetRequiredService<VpnNodesService>());
-
+		builder.Services.AddSingleton<VpnNodesStatusService>();
+		builder.Services.AddHostedService(pr => pr.GetRequiredService<VpnNodesStatusService>());
 
 		builder.Services.AddDbContext<VpnContext>(opts => {
 			opts.UseNpgsql(builder.Environment.IsDevelopment()
@@ -63,31 +77,25 @@ internal class Program
 				, opts => { opts.MigrationsAssembly(nameof(main_server_api)); });
 		});
 
-
 		var app = builder.Build();
 
 
-		app.UseCors(opts =>
-		{
+		app.UseCors(opts => {
 			opts.AllowAnyOrigin();
 			opts.AllowAnyMethod();
 			opts.AllowAnyHeader();
 		});
 
-#if DEBUG
-		if (app.Environment.IsDevelopment())
-		{
+		if(app.Environment.IsDevelopment()) {
 			app.UseSwagger();
 			app.UseSwaggerUI();
 		}
-#endif
 
 		app.UseAuthentication();
 		app.UseRouting();
 		app.UseAuthorization();
 		app.MapControllers();
 
-		app.Services.CreateScope().ServiceProvider.GetRequiredService<ILogger<Program>>().LogInformation($"Env: {app.Environment.EnvironmentName}");
 		app.Services.CreateScope().ServiceProvider.GetRequiredService<VpnContext>().Database.Migrate();
 		app.Run();
 	}

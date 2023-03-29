@@ -11,7 +11,7 @@ public sealed class EnvironmentProvider
 
 	[Obsolete]
 	public string? JWT_SIGNING_KEY_B64 { get; init; } = null;
-
+	public bool? GENERATE_JWT_SIG { get; init; } = null;
 
 	private readonly ILogger<EnvironmentProvider>? _logger;
 
@@ -21,6 +21,7 @@ public sealed class EnvironmentProvider
 
 		JWT_SIGNING_KEY_B64 = ParseStringValue(ENV_JWT_SIGNING_KEY_B64, 
 			x=> Convert.TryFromBase64String(x, new byte[512/8], out _));
+		GENERATE_JWT_SIG = ParseBoolValue(ENV_GENERATE_JWT_SIG);
 	}
 
 	private string GetIncorrectIgnoredMessage(string EnvName)

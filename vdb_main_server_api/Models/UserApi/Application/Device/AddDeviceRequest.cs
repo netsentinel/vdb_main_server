@@ -8,5 +8,5 @@ public class AddDeviceRequest
 
 	[Required]
 	[MaxLength(LengthOfBase64For256Bits)] 
-	public string WgPubkey { get; set; }
+	public string WireguardPublicKey { get; set; }
 }

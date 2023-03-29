@@ -42,6 +42,10 @@ public class SettingsProviderService
 		_configuration.GetSection(nameof(DeviceControllerSettings))
 		.Get<DeviceControllerSettings>() ?? new();
 
+	public VpnNodesStatusServiceSettings VpnNodesStatusServiceSettings =>
+		_configuration.GetSection(nameof(VpnNodesStatusServiceSettings))
+		.Get<VpnNodesStatusServiceSettings>() ?? new();
+
 	public SettingsProviderService(IConfiguration configuration, EnvironmentProvider environmentProvider)
 	{
 		_configuration = configuration;

@@ -9,8 +9,8 @@ public class PeerActionRequest
         PublicKey = publicKey;
     }
 
-    public AddPeerResponse CreateResponse(string allowedIps, string? interfacePublicKey = null)
+    public AddPeerResponse CreateResponse(string allowedIps, string interfacePublicKey)
     {
-        return new(PublicKey, allowedIps, interfacePublicKey);
+        return new(allowedIps, interfacePublicKey);
     }
 }

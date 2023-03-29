@@ -16,6 +16,7 @@ using System.Net.Http.Json;
 using vdb_node_api.Models.NodeApi;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
+using System.Collections.ObjectModel;
 
 namespace vdb_main_server_api.Services;
 
@@ -50,9 +51,11 @@ public sealed class VpnNodesService : BackgroundService
 	private const string protocol = @"https";
 	private const string peersControllerPath = @"api/peers";
 	private const string statusControllerPath = @"api/status";
-	private string GetPeersPathForNode(VpnNodeInfo nodeInfo)
-		=> $"{protocol}://{nodeInfo.IpAddress}:{nodeInfo.ApiTlsPort}/{peersControllerPath}";
-	private string GetStatusPathForNode(VpnNodeInfo nodeInfo)
+
+	public string GetPeersPathForNode(VpnNodeInfo nodeInfo, bool withCleanup)
+		=> $"{protocol}://{nodeInfo.IpAddress}:{nodeInfo.ApiTlsPort}/{peersControllerPath}" + 
+			(withCleanup ? @"?withCleanup=true" : string.Empty);
+	public string GetStatusPathForNode(VpnNodeInfo nodeInfo)
 		=> $"{protocol}://{nodeInfo.IpAddress}:{nodeInfo.ApiTlsPort}/{statusControllerPath}";
 
 
@@ -64,6 +67,10 @@ public sealed class VpnNodesService : BackgroundService
 	private readonly Dictionary<int, (VpnNodeInfo nodeInfo, VpnNodeStatus nodeStatus, HttpClient httpClient)> _idToNode;
 	private readonly HttpClientHandler _httpDefaultHandler;
 	private readonly JsonSerializerOptions _defaultJsonOptions;
+
+	public ReadOnlyDictionary<string, (VpnNodeInfo nodeInfo, VpnNodeStatus nodeStatus, HttpClient httpClient)> NameToNode 
+		=> _nameToNode.AsReadOnly();
+
 	public VpnNodesService(SettingsProviderService settingsProvider, ILogger<VpnNodesService> logger)
 	{
 		_settings = settingsProvider.VpnNodesServiceSettings;
@@ -151,7 +158,7 @@ public sealed class VpnNodesService : BackgroundService
 
 		try
 		{
-			return await httpClient!.GetFromJsonAsync<WgShortPeerInfo[]>(GetPeersPathForNode(nodeInfo), _defaultJsonOptions);
+			return await httpClient!.GetFromJsonAsync<WgShortPeerInfo[]>(GetPeersPathForNode(nodeInfo,true), _defaultJsonOptions);
 		}
 		catch (HttpRequestException)
 		{
@@ -173,7 +180,7 @@ public sealed class VpnNodesService : BackgroundService
 
 		try
 		{
-			var response = await httpClient.PutAsync(GetPeersPathForNode(nodeInfo),
+			var response = await httpClient.PutAsync(GetPeersPathForNode(nodeInfo,false),
 				JsonContent.Create(new PeerActionRequest(peerPubkey), options: _defaultJsonOptions));
 
 			return !response.IsSuccessStatusCode ? null :
@@ -199,7 +206,7 @@ public sealed class VpnNodesService : BackgroundService
 
 		try
 		{
-			var response = await httpClient.PatchAsync(GetPeersPathForNode(nodeInfo),
+			var response = await httpClient.PatchAsync(GetPeersPathForNode(nodeInfo,false),
 				JsonContent.Create(new PeerActionRequest(peerPubkey), options: _defaultJsonOptions));
 
 			return response.IsSuccessStatusCode;
@@ -223,7 +230,7 @@ public sealed class VpnNodesService : BackgroundService
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
 		// every minute
-		_ = PingAllNodesAsync(stoppingToken, 60 * 1000); // not awaited, fire-and-forget
+		_ = PingAllNodesAsync(stoppingToken, _settings.PingNodesIntervalSeconds * 1000); // not awaited, fire-and-forget
 
 		while (!stoppingToken.IsCancellationRequested)
 		{
@@ -232,7 +239,11 @@ public sealed class VpnNodesService : BackgroundService
 				var (nodeInfo, nodeStatus, _) = val;
 				nodeStatus.PeersCount = (await GetPeersFromNode(nodeInfo.Name))?.Length ?? 0;
 			}
-			await Task.Delay(GetDelayFromNowMs(), stoppingToken);
+
+			var delayMs = GetDelayFromNowMs();
+			_logger.LogInformation($"Peers review is delayed for {delayMs / 1000}s. " +
+				$"Once at night mode enabled: {_settings.ReviewNodesOnesAtNight}.");
+			await Task.Delay(delayMs, stoppingToken);
 		}
 	}
 	private async Task PingAllNodesAsync(CancellationToken cancellationToken, int millisecondsInterval)

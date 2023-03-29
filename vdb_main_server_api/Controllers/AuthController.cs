@@ -27,12 +27,14 @@ public sealed class AuthController : ControllerBase
 
 	private readonly VpnContext _context;
 	private readonly JwtService _jwtService;
+	private readonly ILogger<AuthController> _logger;
 	private static CookieOptions? _jwtCookieOptions;
 
-	public AuthController(VpnContext context, JwtService jwtService)
+	public AuthController(VpnContext context, JwtService jwtService, ILogger<AuthController> logger)
 	{
 		_context = context;
 		_jwtService = jwtService;
+		this._logger = logger;
 	}
 
 
@@ -193,7 +195,7 @@ public sealed class AuthController : ControllerBase
 	[HttpPut]
 	public async Task<IActionResult> Register(
 		[FromBody][Required] RegistrationRequest request,
-		[FromQuery] bool redirectToLogin = true,
+		[FromQuery] bool redirectToLogin = false,
 		[FromQuery] bool provideRefresh = true,
 		[FromQuery] bool refreshJwtInBody = false)
 	{
@@ -220,6 +222,11 @@ public sealed class AuthController : ControllerBase
 			// other part
 			RefreshTokensEntropies = new(0),
 		};
+
+		_logger.LogDebug($"Added new user:\n" +
+			$"==> Email: \'{toAdd.Email}\'\n" +
+			$"==> PassHashB64: \'{Convert.ToBase64String(toAdd.PasswordHash)}\'\n" +
+			$"==> PassSaltB64: \'{Convert.ToBase64String(toAdd.PasswordSalt)}\'");
 
 		_context.Users.Add(toAdd);
 		await _context.SaveChangesAsync();
