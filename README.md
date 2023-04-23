@@ -7,6 +7,20 @@
 ### Alpine-based TLS-securely WebAPI-managed controller server for [rest2wg](https://github.com/LuminoDiode/rest2wireguard) containers network.
 <br/>
 
+## Full list of endpoints:
+- ### AUTH
+    - **GET /api/auth** - always returns 200_OK if user is authorized.
+    - **POST /api/auth[?provideRefresh=true][?refreshJwtInBody=false]** - authenticates the user using [LoginRequest](https://github.com/LuminoDiode/vdb_main_server/blob/master/vdb_main_server_api/Models/UserApi/Website/Auth/LoginRequest.cs) credentials.
+    - **PUT /api/auth[?provideRefresh=true][?refreshJwtInBody=false][?redirectToLogin=false]** - creates [or authenticates (if redirectToLogin is set to true)] the user using [RegistrationRequest](https://github.com/LuminoDiode/vdb_main_server/blob/master/vdb_main_server_api/Models/UserApi/Website/Auth/RegistrationRequest.cs) credentials.
+    - **PATCH /api/auth** - refreshes tokens using refresh JWT from cookie XOR [RefreshJwtRequest](https://github.com/LuminoDiode/vdb_main_server/blob/master/vdb_main_server_api/Models/UserApi/Website/Auth/RefreshJwtRequest.cs) from body. If token is passed both in cookie and body, 400_BadRequest is returned.
+    - **PATCH /api/auth/refresh** - do the same as above.
+    - **DELETE /api/auth** - terminates all other refresh JWTs. Token must be passed in cookies.
+- ### DEVICE (requires authorizaion)
+    - **GET /api/device** - returns list of devices for current user.
+    - **PUT /api/device** - adds new device to the database using [AddDeviceRequest](https://github.com/LuminoDiode/vdb_main_server/blob/master/vdb_main_server_api/Models/UserApi/Website/Device/AddDeviceRequest.cs) body.
+    
+
+
 ## Full list of environment variables
 - ### NGINX
     - **VDB_LIMIT_REQ** - limit requests per second for every address (0.1 = 6 requests per minute etc.).
