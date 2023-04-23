@@ -32,7 +32,15 @@ public class UserDevice
 
 	public long Id { get; set; }
 	public int UserId { get; set; }
-	[MaxLength(LengthOfBase64For256Bits)] public string WireguardPublicKey { get; set; }
+	[MaxLength(LengthOfBase64For256Bits)] public string WireguardPublicKey { get; set; } = null!;
 	public int? LastConnectedNodeId { get; set; }
 	public DateTime? LastSeenUtc { get; set; }
+
+
+	/* Идея: добавить возможность вручную добавить WG-ключи
+	 * Проблема: ключ будет снесен автоочисткой, что не является
+	 * ожидаемым поведением для данного такого ключа.
+	 * 
+	 * public bool IsAddedManually { get; set; } = false; 
+	 */
 }

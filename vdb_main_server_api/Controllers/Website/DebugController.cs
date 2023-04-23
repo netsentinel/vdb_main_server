@@ -1,5 +1,5 @@
 ﻿#if DEBUG
-using main_server_api.Models.UserApi.Website.Auth;
+using main_server_api.Models.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
@@ -14,12 +14,12 @@ namespace main_server_api.Controllers.Website;
 [Route("api/[controller]")]
 [Consumes("application/json")]
 [Produces("application/json")]
-public class DebugController : ControllerBase
+public class Debug2Controller : ControllerBase
 {
     private readonly SettingsProviderService _settingsProvider;
     private readonly VpnNodesService _nodesService;
     private readonly ILogger<DebugController> _logger;
-    public DebugController(
+    public Debug2Controller(
         SettingsProviderService settingsProvider,
         VpnNodesService nodesService,
         ILogger<DebugController> logger)

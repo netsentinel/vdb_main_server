@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace main_server_api.Models.UserApi.Website.Auth;
+namespace main_server_api.Models.Auth;
 
 public class RefreshJwtRequest
 {

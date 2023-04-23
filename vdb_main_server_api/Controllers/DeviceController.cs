@@ -1,6 +1,7 @@
 ﻿using Dapper;
 using DataAccessLayer.Contexts;
 using DataAccessLayer.Models;
+using main_server_api.Models.Device;
 using main_server_api.Models.Runtime;
 using main_server_api.Models.UserApi.Application.Device;
 using main_server_api.Models.UserApi.Website.Common;
@@ -11,6 +12,7 @@ using Npgsql;
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using vdb_main_server_api.Services;
+using static DataAccessLayer.Models.User;
 
 namespace main_server_api.Controllers;
 
@@ -49,13 +51,15 @@ public class DeviceController : ControllerBase
 	[NonAction]
 	public int GetDevicesLimit(User.AccessLevels userAccessLevel)
 	{
-#if DEBUG
-		return ushort.MaxValue*10;
-#else
 		var accessLevel = (int)userAccessLevel;
 
-		return _accessLevelToDevicesLimit.TryGetValue(accessLevel, out var limit) ?
+		var result = _accessLevelToDevicesLimit.TryGetValue(accessLevel, out var limit) ?
 			limit : accessLevel * 3 + 1; // lowest: 1, highest: 13
+
+#if DEBUG
+		return result * 5;
+#else
+		return result;
 #endif
 	}
 
@@ -78,8 +82,8 @@ public class DeviceController : ControllerBase
 		}
 
 		var userId = this.ParseIdClaim();
-		var userAccessLevel= (await _context.Users.AsNoTracking()
-			.FirstOrDefaultAsync(x=> x.Id== userId))?.GetAccessLevel();
+		var userAccessLevel = (await _context.Users.AsNoTracking()
+			.FirstOrDefaultAsync(x => x.Id == userId))?.GetAccessLevel();
 
 		if(userAccessLevel is null) {
 			return UnprocessableEntity(ErrorMessages.AccessJwtUserNotFound);
@@ -108,7 +112,7 @@ public class DeviceController : ControllerBase
 	 * base64-encoded wg pubkey in url?
 	 */
 	[HttpPatch]
-	public async Task<IActionResult> DeleteDevice([FromBody][Required] PatchDeviceRequest request)
+	public async Task<IActionResult> DeleteDevice([FromBody][Required] DeleteDeviceRequest request)
 	{
 		int userId = this.ParseIdClaim();
 		var toDelete = await _context.Devices.FirstOrDefaultAsync(d =>
@@ -128,5 +132,17 @@ public class DeviceController : ControllerBase
 		await _context.SaveChangesAsync();
 
 		return Accepted(); // because we did not awaited one of the calls above 
+	}
+
+
+	[HttpDelete]
+	[Route("{pubkeyBase64Url}")]
+	public async Task<IActionResult> DeleteDevice([Required][FromRoute] string pubkeyBase64Url)
+	{
+		var actualKey = pubkeyBase64Url
+			.Replace('-', '+')
+			.Replace('_', '/');
+
+		return await this.DeleteDevice(new DeleteDeviceRequest { WireguardPublicKey = actualKey });
 	}
 }

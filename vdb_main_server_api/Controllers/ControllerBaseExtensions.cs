@@ -17,6 +17,12 @@ public static class ControllerBaseExtensions
 			&& Convert.TryFromBase64String(pk, new byte[pk.Length], out var bytesCount)
 			&& (strictBytesCount == -1 || bytesCount == strictBytesCount);
 	}
+	[NonAction]
+	public static bool ValidatePubkeyWithoutDecoding(this ControllerBase ctr, string pk, int strictBytesCount = 256 / 8)
+	{
+		return !string.IsNullOrWhiteSpace(pk)
+			&& pk.Length <= (strictBytesCount * 4 / 3 + 3);
+	}
 
 	/// <exception cref="NullReferenceException"/>
 	[NonAction]

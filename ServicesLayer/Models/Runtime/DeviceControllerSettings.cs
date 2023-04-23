@@ -8,5 +8,6 @@ public class AccessLevelToDevicesLimit
 
 public class DeviceControllerSettings
 {
-	public AccessLevelToDevicesLimit[] AccessLevelToMaxDevices { get; set; }
+	public AccessLevelToDevicesLimit[]? AccessLevelToMaxDevices { get; set; }
+	public int DevicesLimitMultiplier { get; set; } = 1;
 }

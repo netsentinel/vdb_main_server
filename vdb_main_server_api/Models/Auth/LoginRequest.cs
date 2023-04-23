@@ -2,7 +2,7 @@
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
-namespace main_server_api.Models.UserApi.Website.Auth;
+namespace main_server_api.Models.Auth;
 
 public class LoginRequest
 {
@@ -13,7 +13,7 @@ public class LoginRequest
     public string Email { get; set; }
 
     [Required]
-    [MinLength(8)]
+    [MinLength(6)]
     [MaxLength(256)]
     [DataType(DataType.Password)]
     [PasswordPropertyText]

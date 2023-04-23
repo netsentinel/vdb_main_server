@@ -1,6 +1,6 @@
 ﻿using DataAccessLayer.Contexts;
 using DataAccessLayer.Models;
-using main_server_api.Models.UserApi.Website.Auth;
+using main_server_api.Models.Auth;
 using main_server_api.Models.UserApi.Website.Common;
 using main_server_api.Services.Static;
 using Microsoft.AspNetCore.Authorization;
@@ -90,6 +90,8 @@ public sealed class AuthController : ControllerBase
 					HttpOnly = true,
 					Secure = true,
 					SameSite = SameSiteMode.Strict,
+					Path = "/api/auth/refresh",
+					IsEssential = true,
 #endif
 					MaxAge = _jwtService.RefreshTokenLifespan
 				};
