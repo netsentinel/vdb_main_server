@@ -44,8 +44,12 @@
 - **5001** - nginx-to-api HTTP2 self-signed TLS port.
 - **5002** - nginx-to-api no-TLS port.
 
-## Nodes naming policy
-### Example name: 'Ams-free-1'
+## Nodes naming and addressing policy
+### Example name: 'Ams-free-1'. Naming sequence: 
 - **3 chars** - location identified, i.e. 'Ams' - Amsterdam.
 - **free/paid** - access level required identifier.
 - **digit** - identifier in case of duplications in a single location.
+### Example address: '45.15.159.157:55000'. addressing sequence:
+- **IP address** - the address of the server itself.
+- **2 digits** - constant '55' prefix. Consider not changing.
+- **3 gitids** - itertate by 10 for rest2wg container, iterate by 1 for WG/HTTP/HTTPS ports. Example addresses array for 3 rest2wg containers on a single host: [55090, 55091, 55092; 550100, 55101; 55110, 55111]
