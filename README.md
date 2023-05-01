@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 [![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)](https://hub.docker.com/repository/docker/luminodiode/rest2wireguard)
 [![Alpine Linux](https://img.shields.io/badge/Alpine_Linux-%230D597F.svg?style=for-the-badge&logo=alpine-linux&logoColor=white)](https://www.alpinelinux.org)
 [![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.npgsql.org/)
@@ -99,4 +98,3 @@
 - **IP address** - the address of the server itself.
 - **2 digits** - constant '55' prefix. Consider not changing.
 - **3 gitids** - itertate by 10 for rest2wg container, iterate by 1 for WG/HTTPS/HTTP ports. Example addresses array for 3 rest2wg containers on a single host: [55090, 55091, 55092; 550100, 55101; 55110, 55111]
->>>>>>> 1d0aa58d65c7df9c7ce13bd8ef22ceed88dface8
