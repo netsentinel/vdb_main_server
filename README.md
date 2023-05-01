@@ -43,3 +43,9 @@
 ## Full list of listened ports
 - **5001** - nginx-to-api HTTP2 self-signed TLS port.
 - **5002** - nginx-to-api no-TLS port.
+
+## Nodes naming policy
+### Example name: 'Ams-free-1'
+- **3 chars** - location identified, i.e. 'Ams' - Amsterdam.
+- **free/paid** - access level required identifier.
+- **digit** - identifier in case of duplications in a single location.
