@@ -7,7 +7,7 @@ using vdb_main_server_api.Models.Runtime;
 using vdb_main_server_api.Services;
 using vdb_node_api.Models.NodeApi;
 
-namespace main_server_api.Controllers.Website;
+namespace main_server_api.Controllers;
 
 [AllowAnonymous]
 [ApiController]

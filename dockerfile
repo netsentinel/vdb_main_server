@@ -16,6 +16,7 @@ RUN apk add -q --no-progress bash
 RUN apk add -q --no-progress nginx
 RUN apk add -q --no-progress openssl
 RUN apk add -q --no-progress aspnetcore7-runtime
+RUN mkdir -p /data/nginx/cache
 
 COPY --from=build /app/publish /app
 COPY ./build_alpine/pre-setup.sh ./etc/rest2wg/pre-setup.sh

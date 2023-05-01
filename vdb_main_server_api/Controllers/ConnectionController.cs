@@ -38,6 +38,8 @@ public class ConnectionController : ControllerBase
 
 	[HttpGet]
 	[AllowAnonymous]
+	[Route("")]
+	[Route("nodes-list")]
 	public async Task<IActionResult> GetNodesList()
 	{
 		return await Task.Run(()=>Ok(_statusService.Statuses));

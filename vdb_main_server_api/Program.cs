@@ -27,9 +27,11 @@ internal class Program
 				ValidationAlgorithm = ValidationAlgorithm.HMACSHA512
 			});
 
+		// order is important!
 		builder.Configuration
 			.AddJsonFile("./appsettings.json", true)
 			.AddJsonFile("/run/secrets/aspsecrets.json", true)
+			.AddJsonFile("/run/secrets/nodes.json", true)
 			.AddJsonFile("/run/secrets/generated_sig.json", true)
 			.AddEnvironmentVariables()
 			.Build();

@@ -16,8 +16,8 @@ using vdb_main_server_api.Services;
 
 namespace main_server_api.Controllers;
 
+[Authorize]
 [ApiController]
-[AllowAnonymous]
 [Route("api/[controller]")]
 [Consumes("application/json")]
 [Produces("application/json")]
@@ -40,8 +40,17 @@ public sealed class AuthController : ControllerBase
 
 	// Метод возвращает OkResult, сигнализируя, что авторизация пользователя возможна.
 	[HttpGet]
-	[Authorize]
 	public IActionResult Validate() => Ok();
+
+	[HttpGet]
+	[Route("sessions")]
+	public async Task<IActionResult> GetRefreshCount()
+	{
+		var count = await _context.Users.Where(x => x.Id == this.ParseIdClaim())
+			.Select(x => x.RefreshTokensEntropies.Count).FirstOrDefaultAsync();
+
+		return Ok(new SessionsResponse() { TotalCount = count });
+	}
 
 
 	/* Метод служит для генерации access & refresh JWT.
@@ -159,6 +168,7 @@ public sealed class AuthController : ControllerBase
 	 * соответствующий параметр.
 	 */
 	[HttpPost]
+	[AllowAnonymous]
 	public async Task<IActionResult> Login(
 	[FromBody][Required] LoginRequest request,
 	[FromQuery] bool provideRefresh = true,
@@ -195,6 +205,7 @@ public sealed class AuthController : ControllerBase
 	 * через url запроса.
 	 */
 	[HttpPut]
+	[AllowAnonymous]
 	public async Task<IActionResult> Register(
 		[FromBody][Required] RegistrationRequest request,
 		[FromQuery] bool redirectToLogin = false,
@@ -247,6 +258,7 @@ public sealed class AuthController : ControllerBase
 	[HttpPatch] // yeah, prohibiting body in HttpDelete was a great decision! now try to pass a base64 there, the genuis you are, HTTP creator!
 	[Route("")]
 	[Route("refresh")]
+	[AllowAnonymous]
 	public async Task<IActionResult> RenewJwt([FromBody] RefreshJwtRequest? request)
 	{
 		var fromCookie = Request.Cookies[JwtRefreshTokenCookieName];
@@ -282,6 +294,8 @@ public sealed class AuthController : ControllerBase
 	 * Оно предполагает удаление всех refresh токенов данного юзера из базы данных.
 	 */
 	[HttpDelete]
+	[Route("")]
+	[Route("other-sessions")]
 	public async Task<IActionResult> DeleteAllOtherDevices()
 	{
 		var refreshJwt = Request.Cookies[JwtRefreshTokenCookieName];
@@ -300,5 +314,46 @@ public sealed class AuthController : ControllerBase
 		var newToken = IssueJwtAndAddToUser(foundUserAsTracking!);
 		await _context.SaveChangesAsync();
 		return Ok(newToken);
+	}
+
+	[HttpDelete]
+	[Route("self")]
+	public async Task<IActionResult> TerminateSession()
+	{
+		var refreshJwt = Request.Cookies[JwtRefreshTokenCookieName];
+
+		if(refreshJwt is null) {
+			return BadRequest(ErrorMessages.RefreshJwtIsExpectedInCookies);
+		}
+
+		// simply do validate without issuing the new one
+		var (foundUserAsTracking, errorResult) = await ValidateAndRemoveRefreshJWT(refreshJwt);
+		if(errorResult is not null) {
+			return errorResult;
+		}
+
+		await _context.SaveChangesAsync();
+		return Ok();
+	}
+
+	[HttpPatch]
+	[Route("password")]
+	public async Task<IActionResult> ChangePassword([FromBody][Required] ChangePasswordRequest request)
+	{
+		var user = await _context.Users.FirstOrDefaultAsync();
+		if(user is null) {
+			return NotFound();
+		}
+
+		var passHash = PasswordsService.HashPassword(request.Password, out var passSalt);
+		user.PasswordSalt = passSalt;
+		user.PasswordHash = passHash;
+
+		try {
+			await _context.SaveChangesAsync();
+			return Ok();
+		} catch {
+			return Problem();
+		}
 	}
 }

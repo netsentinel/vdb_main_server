@@ -115,6 +115,7 @@ public class DeviceController : ControllerBase
 	public async Task<IActionResult> DeleteDevice([FromBody][Required] DeleteDeviceRequest request)
 	{
 		int userId = this.ParseIdClaim();
+
 		var toDelete = await _context.Devices.FirstOrDefaultAsync(d =>
 			d.WireguardPublicKey == request.WireguardPublicKey && d.UserId == userId);
 
@@ -131,7 +132,7 @@ public class DeviceController : ControllerBase
 		_context.Remove(toDelete);
 		await _context.SaveChangesAsync();
 
-		return Accepted(); // because we did not awaited one of the calls above 
+		return Accepted(); // because we did not await one of the calls above 
 	}
 
 
