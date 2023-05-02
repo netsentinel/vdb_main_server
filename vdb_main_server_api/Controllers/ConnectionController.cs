@@ -38,7 +38,6 @@ public class ConnectionController : ControllerBase
 
 	[HttpGet]
 	[AllowAnonymous]
-	[Route("")]
 	[Route("nodes-list")]
 	public async Task<IActionResult> GetNodesList()
 	{
