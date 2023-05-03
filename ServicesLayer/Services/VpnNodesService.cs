@@ -73,11 +73,14 @@ public sealed class VpnNodesService : BackgroundService
 
 	public VpnNodesService(SettingsProviderService settingsProvider, ILogger<VpnNodesService> logger)
 	{
+		logger.LogInformation($"Creating {nameof(VpnNodesService)}...");
+
 		_settings = settingsProvider.VpnNodesServiceSettings;
 		_logger = logger;
 
-		System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls13;
+		System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
 		_httpDefaultHandler = new HttpClientHandler();
+		_httpDefaultHandler.SslProtocols = System.Security.Authentication.SslProtocols.Tls12;
 		_httpDefaultHandler.ClientCertificateOptions = ClientCertificateOption.Manual;
 		_httpDefaultHandler.ServerCertificateCustomValidationCallback // allow self-signed TLS-cert
 			= (httpRequestMessage, cert, cetChain, policyErrors) => true;
@@ -85,6 +88,7 @@ public sealed class VpnNodesService : BackgroundService
 		_nameToNode = settingsProvider.VpnNodeInfos.ToDictionary(x => x.Name, x =>
 		{
 			var client = new HttpClient(_httpDefaultHandler);
+			client.Timeout = TimeSpan.FromSeconds(15);
 			client.DefaultRequestHeaders.Authorization
 				= new AuthenticationHeaderValue("Basic", x.SecretAccessKeyBase64);
 			return (x, new VpnNodeStatus(), client);
@@ -92,6 +96,8 @@ public sealed class VpnNodesService : BackgroundService
 		_idToNode = _nameToNode.Values.ToDictionary(x => x.nodeInfo.Id);
 
 		_defaultJsonOptions = new(JsonSerializerDefaults.Web);
+
+		logger.LogInformation($"Created {nameof(VpnNodesService)}.");
 	}
 	public string GetNodeNameById(int id) => _idToNode[id].nodeInfo.Name;
 
@@ -112,16 +118,26 @@ public sealed class VpnNodesService : BackgroundService
 
 		var (nodeInfo, nodeStatus, httpClient) = testedNode;
 
+		_logger.LogInformation($"Starting querying the node \'{nodeName}\' status...");
 		try
 		{
 			if (nodeInfo.ComputedKeyHmac is null)
 			{
-				return (await httpClient.GetAsync(GetStatusPathForNode(nodeInfo))).IsSuccessStatusCode;
+				_logger.LogInformation($"Hmac is disabled for node \'{nodeName}\'.");
+				var path = GetStatusPathForNode(nodeInfo);
+				_logger.LogInformation($"Node \'{nodeName}\' status path is {path}. Sending...");
+				var response = await httpClient.GetAsync(path);
+				_logger.LogInformation($"Got response from node \'{nodeName}\'.");
+				if(!response.IsSuccessStatusCode) {
+					_logger.LogWarning($"Node responded with an unsuccessful status code: {response.StatusCode}.");
+				}
 
+				return response.IsSuccessStatusCode;
 			} else
 			{
+				_logger.LogInformation($"Hmac is enabled for node \'{nodeName}\'.");
 				var response = await httpClient.GetFromJsonAsync<SecuredStatusResponse>(GetStatusPathForNode(nodeInfo));
-				if(response is null){
+				if(response is null) {
 					return false;
 				} else
 				if(!nodeInfo.EnableStatusHmac) {
@@ -139,8 +155,9 @@ public sealed class VpnNodesService : BackgroundService
 				//	!nodeInfo.EnableStatusHmac || response.AuthKeyHmacSha512Base64.Equals(nodeInfo.ComputedKeyHmac));
 			}
 		}
-		catch (HttpRequestException)
+		catch (Exception ex)
 		{
+			_logger.LogWarning($"Problem accessing the node \'{nodeInfo.Name}\': {ex.Message}. {((ex.InnerException?.Message + '.') ?? string.Empty)}");
 			return false;
 		}
 	}
@@ -229,6 +246,8 @@ public sealed class VpnNodesService : BackgroundService
 	}
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
+		_logger.LogInformation($"Starting {nameof(ExecuteAsync)}...");
+		_logger.LogInformation($"Total nodes to be tracked: {_nameToNode.Count}.");
 		// every minute
 		_ = PingAllNodesAsync(stoppingToken, _settings.PingNodesIntervalSeconds * 1000); // not awaited, fire-and-forget
 
@@ -245,16 +264,23 @@ public sealed class VpnNodesService : BackgroundService
 				$"Once at night mode enabled: {_settings.ReviewNodesOnesAtNight}.");
 			await Task.Delay(delayMs, stoppingToken);
 		}
+
+		_logger.LogInformation($"Exiting {nameof(ExecuteAsync)}.");
 	}
 	private async Task PingAllNodesAsync(CancellationToken cancellationToken, int millisecondsInterval)
 	{
+		_logger.LogInformation($"Starting {nameof(PingAllNodesAsync)}...");
+
 		while (!cancellationToken.IsCancellationRequested)
 		{
 			foreach (var node in _nameToNode.Values)
 			{
+				_logger.LogInformation($"Pinging node \'{node.nodeInfo.Name}\'...");
 				_ = CheckIsNodeAccessibleBackground(node.nodeInfo.Name); // not awaited, fire-and-forget
 			}
 			await Task.Delay(millisecondsInterval, cancellationToken);
 		}
+
+		_logger.LogInformation($"Exiting {nameof(PingAllNodesAsync)}.");
 	}
 }
