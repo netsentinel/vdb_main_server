@@ -1,6 +1,5 @@
-﻿using DataAccessLayer.Models;
-using main_server_api.Models.UserApi.Website.Common;
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
+using ServicesLayer.Models.Common;
 using System.Security.Claims;
 
 namespace main_server_api.Controllers;

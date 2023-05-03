@@ -1,4 +1,4 @@
-﻿namespace vdb_node_api.Models.NodeApi;
+﻿namespace ServicesLayer.Models.NodeApi;
 
 public class SecuredStatusResponse
 {

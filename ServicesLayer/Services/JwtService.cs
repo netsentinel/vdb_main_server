@@ -1,16 +1,13 @@
-﻿using main_server_api.Models.UserApi.Website.Common;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.IdentityModel.Tokens;
+﻿using Microsoft.IdentityModel.Tokens;
+using ServicesLayer.Models.Common;
 using System.IdentityModel.Tokens.Jwt;
-using System.Runtime;
 using System.Security.Claims;
-using System.Text;
 
-namespace vdb_main_server_api.Services;
+namespace ServicesLayer.Services;
 
 public sealed class JwtService
 {
-	private JwtSecurityTokenHandler _tokenHandler;
+	private readonly JwtSecurityTokenHandler _tokenHandler;
 	private readonly byte[] _signingKey;
 	public TimeSpan AccessTokenLifespan { get; init; }
 	public TimeSpan RefreshTokenLifespan { get; init; }
@@ -25,28 +22,28 @@ public sealed class JwtService
 		this.RefreshTokenLifespan = TimeSpan.FromSeconds(settings.RefreshTokenLifespanSeconds);
 		this._signingKey = Convert.FromBase64String(settings.SigningKeyBase64);
 
-		if(_signingKey.Length != (512 / 8))
+		if(this._signingKey.Length != 512 / 8)
 			throw new ArgumentOutOfRangeException("JWT signing key must be exact 512 bits long.");
 	}
 
 
 	public string GenerateJwtToken(IEnumerable<Claim> claims, TimeSpan? lifespan = null)
 	{
-		return _tokenHandler.WriteToken(_tokenHandler.CreateToken(new SecurityTokenDescriptor {
+		return this._tokenHandler.WriteToken(this._tokenHandler.CreateToken(new SecurityTokenDescriptor {
 			Subject = new ClaimsIdentity(claims),
-			Expires = DateTime.UtcNow.Add(lifespan ?? AccessTokenLifespan),
-			SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(_signingKey), SecurityAlgorithms.HmacSha512Signature)
+			Expires = DateTime.UtcNow.Add(lifespan ?? this.AccessTokenLifespan),
+			SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(this._signingKey), SecurityAlgorithms.HmacSha512Signature)
 		}));
 	}
 
 	public ClaimsPrincipal ValidateJwtToken(string token)
 	{
-		var result = _tokenHandler.ValidateToken(token, new TokenValidationParameters {
+		var result = this._tokenHandler.ValidateToken(token, new TokenValidationParameters {
 			ValidateIssuer = false,
 			ValidateAudience = false,
 			ValidateLifetime = true,
 			ValidateIssuerSigningKey = true,
-			IssuerSigningKey = new SymmetricSecurityKey(_signingKey)
+			IssuerSigningKey = new SymmetricSecurityKey(this._signingKey)
 #if DEBUG
 			/* Данный твик устанавливает шаг проверки валидации времени смерти токена.
 			 * https://github.com/AzureAD/azure-activedirectory-identitymodel-extensions-for-dotnet/blob/dev/src/Microsoft.IdentityModel.Tokens/TokenValidationParameters.cs#L345
@@ -62,7 +59,7 @@ public sealed class JwtService
 	#region app-specific
 	public string GenerateAccessJwtToken(UserInfo user)
 	{
-		return GenerateJwtToken(new Claim[]
+		return this.GenerateJwtToken(new Claim[]
 		{
 			new Claim(nameof(user.Id),user.Id.ToString()),
 			new Claim(nameof(user.IsAdmin), user.IsAdmin.ToString()),
@@ -74,10 +71,10 @@ public sealed class JwtService
 
 	public string GenerateRefreshJwtToken(RefreshToken token)
 	{
-		return GenerateJwtToken(new[] {
+		return this.GenerateJwtToken(new[] {
 			new Claim(nameof(token.IssuedToUser), token.IssuedToUser.ToString()),
 			new Claim(nameof(token.Entropy),token.Entropy.ToString()),
-			}, RefreshTokenLifespan);
+			}, this.RefreshTokenLifespan);
 	}
 	#endregion
 }

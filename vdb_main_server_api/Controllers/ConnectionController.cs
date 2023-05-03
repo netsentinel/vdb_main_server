@@ -1,15 +1,9 @@
 ﻿using DataAccessLayer.Contexts;
-using DataAccessLayer.Models;
-using main_server_api.Models.Runtime;
-using main_server_api.Models.UserApi.Application.Device;
+using main_server_api.Models.Device;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Npgsql;
 using ServicesLayer.Services;
 using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
-using vdb_main_server_api.Services;
 
 namespace main_server_api.Controllers;
 
@@ -25,14 +19,14 @@ public class ConnectionController : ControllerBase
 	private readonly VpnNodesStatusService _statusService;
 	private readonly ILogger<ConnectionController> _logger;
 	public ConnectionController(
-		VpnContext context, 
-		VpnNodesService nodesService, 
-		VpnNodesStatusService statusService, 
+		VpnContext context,
+		VpnNodesService nodesService,
+		VpnNodesStatusService statusService,
 		ILogger<ConnectionController> logger)
 	{
-		_context = context;
-		_nodesService = nodesService;
-		_statusService = statusService;
+		this._context = context;
+		this._nodesService = nodesService;
+		this._statusService = statusService;
 		this._logger = logger;
 	}
 
@@ -41,7 +35,7 @@ public class ConnectionController : ControllerBase
 	[Route("nodes-list")]
 	public async Task<IActionResult> GetNodesList()
 	{
-		return await Task.Run(()=>Ok(_statusService.Statuses));
+		return await Task.Run(() => this.Ok(this._statusService.Statuses));
 	}
 
 	/* TODO: Создать сервис отложенного отключения.
@@ -83,57 +77,57 @@ public class ConnectionController : ControllerBase
 	[HttpPut]
 	public async Task<IActionResult> ConnectToNode([FromBody][Required] ConnectDeviceRequest request)
 	{
-		int userId = this.ParseIdClaim();
+		var userId = this.ParseIdClaim();
 
-		var foundDevice = _context.Devices.Where(x => x.UserId == this.ParseIdClaim())
+		var foundDevice = this._context.Devices.Where(x => x.UserId == this.ParseIdClaim())
 			.FirstOrDefault(x => x.WireguardPublicKey == request.WireguardPublicKey);
 
 		if(foundDevice is null) {
 			// device does not exist for the user, reset it locally and relogin
-			return StatusCode(StatusCodes.Status406NotAcceptable);
+			return this.StatusCode(StatusCodes.Status406NotAcceptable);
 		}
 
-		_logger.LogInformation($"Found device with id={foundDevice.Id}. " +
+		this._logger.LogInformation($"Found device with id={foundDevice.Id}. " +
 			$"Connecting it to node with id={request.NodeId}...");
 
 
 		// ensure disconnected from prev node
 		if(foundDevice.LastConnectedNodeId is not null
 			&& foundDevice.LastConnectedNodeId != request.NodeId) {
-			_logger.LogInformation($"Sending disconnection request to the pevious connected " +
+			this._logger.LogInformation($"Sending disconnection request to the pevious connected " +
 				$"node with id={foundDevice.LastConnectedNodeId}...");
 			try {
 				// not awaited, fire-and-forget
-				_ = _nodesService.RemovePeerFromNode(
+				_ = this._nodesService.RemovePeerFromNode(
 					foundDevice.WireguardPublicKey, foundDevice.LastConnectedNodeId.Value);
 			} catch { }
 		}
 
 		foundDevice.LastConnectedNodeId = request.NodeId;
 		try {
-			_logger.LogInformation($"Sending CONNECTION request for device with ID={foundDevice.Id}" +
+			this._logger.LogInformation($"Sending CONNECTION request for device with ID={foundDevice.Id}" +
 				$"to node with ID={foundDevice.LastConnectedNodeId}...");
-			var addResult = await _nodesService.AddPeerToNode(foundDevice.WireguardPublicKey, request.NodeId);
+			var addResult = await this._nodesService.AddPeerToNode(foundDevice.WireguardPublicKey, request.NodeId);
 			if(addResult is not null && addResult.InterfacePublicKey is not null) {
-				var node = _nodesService.NameToNode[_nodesService.GetNodeNameById(request.NodeId)].nodeInfo;
-				await _context.SaveChangesAsync();
-				return Ok(new ConnectDeviceResponse(addResult, 
+				var node = this._nodesService.NameToNode[this._nodesService.GetNodeNameById(request.NodeId)].nodeInfo;
+				await this._context.SaveChangesAsync();
+				return this.Ok(new ConnectDeviceResponse(addResult,
 					request.WireguardPublicKey, node.IpAddress.ToString(), node.WireguardPort));
 			} else {
-				_logger.LogInformation($"Unable to add pubkey \'{request.WireguardPublicKey.Substring(0, 3)}...\' " +
+				this._logger.LogInformation($"Unable to add pubkey \'{request.WireguardPublicKey.Substring(0, 3)}...\' " +
 				$"to node {request.NodeId}.");
-				return Problem(Utf8Json.JsonSerializer.ToJsonString(addResult));
+				return this.Problem(Utf8Json.JsonSerializer.ToJsonString(addResult));
 			}
 		} catch(Exception ex) {
 			try {
 				// not awaited, fire-and-forget
-				_ = _nodesService.RemovePeerFromNode( // LastConnectedNodeId is not null here!
+				_ = this._nodesService.RemovePeerFromNode( // LastConnectedNodeId is not null here!
 					foundDevice.WireguardPublicKey, foundDevice.LastConnectedNodeId.Value);
 			} catch { }
-			_logger.LogInformation($"Unable to add pubkey \'{request.WireguardPublicKey.Substring(0, 3)}...\' " +
+			this._logger.LogInformation($"Unable to add pubkey \'{request.WireguardPublicKey.Substring(0, 3)}...\' " +
 				$"to node {request.NodeId}: \'{ex.Message}\'.");
 		}
 
-		return StatusCode(StatusCodes.Status500InternalServerError);
+		return this.StatusCode(StatusCodes.Status500InternalServerError);
 	}
 }

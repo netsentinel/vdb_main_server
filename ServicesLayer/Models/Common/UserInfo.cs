@@ -1,8 +1,6 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.ComponentModel;
-using DataAccessLayer.Models;
+﻿using DataAccessLayer.Models;
 
-namespace main_server_api.Models.UserApi.Website.Common;
+namespace ServicesLayer.Models.Common;
 
 public class UserInfo
 {

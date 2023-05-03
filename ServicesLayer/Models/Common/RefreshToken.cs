@@ -1,11 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace main_server_api.Models.UserApi.Website.Common;
+﻿namespace ServicesLayer.Models.Common;
 
 public class RefreshToken
 {

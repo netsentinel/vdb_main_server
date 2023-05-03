@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 
-namespace vdb_main_server_api.Services;
+namespace ServicesLayer.Services;
 
 public sealed class EnvironmentProvider
 {
@@ -17,11 +17,11 @@ public sealed class EnvironmentProvider
 
 	public EnvironmentProvider(ILogger<EnvironmentProvider>? logger)
 	{
-		_logger = logger;
+		this._logger = logger;
 
-		JWT_SIGNING_KEY_B64 = ParseStringValue(ENV_JWT_SIGNING_KEY_B64, 
-			x=> Convert.TryFromBase64String(x, new byte[512/8], out _));
-		GENERATE_JWT_SIG = ParseBoolValue(ENV_GENERATE_JWT_SIG);
+		this.JWT_SIGNING_KEY_B64 = this.ParseStringValue(ENV_JWT_SIGNING_KEY_B64,
+			x => Convert.TryFromBase64String(x, new byte[512 / 8], out _));
+		this.GENERATE_JWT_SIG = this.ParseBoolValue(ENV_GENERATE_JWT_SIG);
 	}
 
 	private string GetIncorrectIgnoredMessage(string EnvName)
@@ -31,53 +31,46 @@ public sealed class EnvironmentProvider
 
 	private bool? ParseBoolValue(string EnvName)
 	{
-		string? str = Environment.GetEnvironmentVariable(EnvName);
-		if (str is not null)
-		{
-			if (str.Equals("true", StringComparison.InvariantCultureIgnoreCase))
-			{
-				_logger?.LogInformation($"{EnvName}={true}.");
+		var str = Environment.GetEnvironmentVariable(EnvName);
+		if(str is not null) {
+			if(str.Equals("true", StringComparison.InvariantCultureIgnoreCase)) {
+				this._logger?.LogInformation($"{EnvName}={true}.");
 				return true;
 			}
-			if (str.Equals("false", StringComparison.InvariantCultureIgnoreCase))
-			{
-				_logger?.LogInformation($"{EnvName}={false}.");
+			if(str.Equals("false", StringComparison.InvariantCultureIgnoreCase)) {
+				this._logger?.LogInformation($"{EnvName}={false}.");
 				return false;
 			}
-			_logger?.LogWarning(GetIncorrectIgnoredMessage(EnvName));
+			this._logger?.LogWarning(this.GetIncorrectIgnoredMessage(EnvName));
 		}
-		_logger?.LogInformation($"{EnvName} was not present.");
+		this._logger?.LogInformation($"{EnvName} was not present.");
 		return null;
 	}
 	private int? ParseIntValue(string EnvName, int minValue = int.MinValue)
 	{
-		string? str = Environment.GetEnvironmentVariable(EnvName);
-		if (str is not null)
-		{
-			if (int.TryParse(str, out int val))
-			{
-				_logger?.LogInformation($"{EnvName}={val}.");
+		var str = Environment.GetEnvironmentVariable(EnvName);
+		if(str is not null) {
+			if(int.TryParse(str, out var val)) {
+				this._logger?.LogInformation($"{EnvName}={val}.");
 				return val;
 			}
-			_logger?.LogWarning(GetIncorrectIgnoredMessage(EnvName));
+			this._logger?.LogWarning(this.GetIncorrectIgnoredMessage(EnvName));
 		}
-		_logger?.LogInformation($"{EnvName} was not present.");
+		this._logger?.LogInformation($"{EnvName} was not present.");
 		return null;
 	}
 
 	private string? ParseStringValue(string EnvName, Func<string, bool> valueValidator)
 	{
-		string? str = Environment.GetEnvironmentVariable(EnvName);
-		if (str is not null)
-		{
-			if (valueValidator(str))
-			{
-				_logger?.LogInformation($"{EnvName}={str}.");
+		var str = Environment.GetEnvironmentVariable(EnvName);
+		if(str is not null) {
+			if(valueValidator(str)) {
+				this._logger?.LogInformation($"{EnvName}={str}.");
 				return str;
 			}
-			_logger?.LogWarning(GetIncorrectIgnoredMessage(EnvName));
+			this._logger?.LogWarning(this.GetIncorrectIgnoredMessage(EnvName));
 		}
-		_logger?.LogInformation($"{EnvName} was not present.");
+		this._logger?.LogInformation($"{EnvName} was not present.");
 		return null;
 	}
 }

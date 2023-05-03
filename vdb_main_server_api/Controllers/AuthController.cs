@@ -1,18 +1,14 @@
 ﻿using DataAccessLayer.Contexts;
 using DataAccessLayer.Models;
 using main_server_api.Models.Auth;
-using main_server_api.Models.UserApi.Website.Common;
-using main_server_api.Services.Static;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using System;
+using ServicesLayer.Models.Common;
+using ServicesLayer.Services;
+using ServicesLayer.Services.Static;
 using System.ComponentModel.DataAnnotations;
-using System.Runtime.InteropServices;
 using System.Security.Claims;
-using vdb_main_server_api.Services;
 
 namespace main_server_api.Controllers;
 
@@ -32,24 +28,24 @@ public sealed class AuthController : ControllerBase
 
 	public AuthController(VpnContext context, JwtService jwtService, ILogger<AuthController> logger)
 	{
-		_context = context;
-		_jwtService = jwtService;
+		this._context = context;
+		this._jwtService = jwtService;
 		this._logger = logger;
 	}
 
 
 	// Метод возвращает OkResult, сигнализируя, что авторизация пользователя возможна.
 	[HttpGet]
-	public IActionResult Validate() => Ok();
+	public IActionResult Validate() => this.Ok();
 
 	[HttpGet]
 	[Route("sessions")]
 	public async Task<IActionResult> GetRefreshCount()
 	{
-		var count = await _context.Users.Where(x => x.Id == this.ParseIdClaim())
+		var count = await this._context.Users.Where(x => x.Id == this.ParseIdClaim())
 			.Select(x => x.RefreshTokensEntropies.Count).FirstOrDefaultAsync();
 
-		return Ok(new SessionsResponse() { TotalCount = count });
+		return this.Ok(new SessionsResponse() { TotalCount = count });
 	}
 
 
@@ -68,7 +64,7 @@ public sealed class AuthController : ControllerBase
 	public JwtResponse IssueJwtAndAddToUser(User user, bool provideRefresh = true, bool refreshJwtInBody = false)
 	{
 		// create access token using passed user model
-		var responseObj = new JwtResponse(_jwtService.GenerateAccessJwtToken(new UserInfo(user)));
+		var responseObj = new JwtResponse(this._jwtService.GenerateAccessJwtToken(new UserInfo(user)));
 		if(!provideRefresh) return responseObj;
 
 
@@ -86,7 +82,7 @@ public sealed class AuthController : ControllerBase
 		};
 
 		// write refresh token
-		var refreshToken = _jwtService.GenerateRefreshJwtToken(issuedTokenRecord);
+		var refreshToken = this._jwtService.GenerateRefreshJwtToken(issuedTokenRecord);
 
 		// decide where to place refresh token
 		if(refreshJwtInBody) {
@@ -102,10 +98,10 @@ public sealed class AuthController : ControllerBase
 					Path = "/api/auth/refresh",
 					IsEssential = true,
 #endif
-					MaxAge = _jwtService.RefreshTokenLifespan
+					MaxAge = this._jwtService.RefreshTokenLifespan
 				};
 			}
-			Response.Cookies.Append(JwtRefreshTokenCookieName, refreshToken, _jwtCookieOptions);
+			this.Response.Cookies.Append(JwtRefreshTokenCookieName, refreshToken, _jwtCookieOptions);
 		}
 
 		user.RefreshTokensEntropies.Add(issuedTokenRecord.Entropy);
@@ -125,15 +121,15 @@ public sealed class AuthController : ControllerBase
 		int userId;
 		long jwtEntropy;
 		try {
-			var parsed = _jwtService.ValidateJwtToken(refreshJwt);
+			var parsed = this._jwtService.ValidateJwtToken(refreshJwt);
 			userId = int.Parse(parsed.FindFirstValue(nameof(RefreshToken.IssuedToUser))!);
 			jwtEntropy = long.Parse(parsed.FindFirstValue(nameof(RefreshToken.Entropy))!);
 		} catch {
-			return (null, BadRequest(ErrorMessages.RefreshJwtIsInvalid));
+			return (null, this.BadRequest(ErrorMessages.RefreshJwtIsInvalid));
 		}
 
 		// find user in database
-		var foundUser = await _context.Users.AsTracking()
+		var foundUser = await this._context.Users.AsTracking()
 			.FirstOrDefaultAsync(x => x.Id == userId);
 		if(foundUser is null) {
 			/* RFC 9110 https://www.rfc-editor.org/rfc/rfc9110.html#name-422-unprocessable-content
@@ -146,12 +142,12 @@ public sealed class AuthController : ControllerBase
 			 * can be sent if an XML request content contains well-formed (i.e., syntactically correct), 
 			 * but semantically erroneous XML instructions.
 			 */
-			return (null, UnprocessableEntity(ErrorMessages.RefreshJwtUserNotFound));
+			return (null, this.UnprocessableEntity(ErrorMessages.RefreshJwtUserNotFound));
 		}
 
 		// find jwt in user collection
 		if(!foundUser.RefreshTokensEntropies.Contains(jwtEntropy)) {
-			return (foundUser, Unauthorized(ErrorMessages.RefreshJwtIsNotFound));
+			return (foundUser, this.Unauthorized(ErrorMessages.RefreshJwtIsNotFound));
 		}
 
 		// remove used jwt
@@ -176,27 +172,27 @@ public sealed class AuthController : ControllerBase
 	{
 		User? found;
 		if(provideRefresh) { // as tracking if refresh is need to be saved
-			found = await _context.Users.AsTracking()
+			found = await this._context.Users.AsTracking()
 				.FirstOrDefaultAsync(x => x.Email == request.Email);
 		} else {
-			found = await _context.Users.AsNoTracking()
+			found = await this._context.Users.AsNoTracking()
 				.FirstOrDefaultAsync(x => x.Email == request.Email);
 		}
 
 		if(found is null) {
-			return NotFound(nameof(request.Email));
+			return this.NotFound(nameof(request.Email));
 		}
 
 		if(!PasswordsService.ConfirmPassword(request.Password, found.PasswordHash, found.PasswordSalt)) {
-			return Unauthorized(nameof(request.Password));
+			return this.Unauthorized(nameof(request.Password));
 		}
 
-		var jwt = IssueJwtAndAddToUser(found, provideRefresh, refreshJwtInBody);
+		var jwt = this.IssueJwtAndAddToUser(found, provideRefresh, refreshJwtInBody);
 		if(provideRefresh) {
-			await _context.SaveChangesAsync();
+			await this._context.SaveChangesAsync();
 		}
 
-		return Ok(jwt);
+		return this.Ok(jwt);
 	}
 
 	/* Метод регистрирует пользователя.
@@ -213,11 +209,11 @@ public sealed class AuthController : ControllerBase
 		[FromQuery] bool refreshJwtInBody = false)
 	{
 		// if user already exists
-		if(await _context.Users.AnyAsync(x => x.Email.Equals(request.Email))) {
+		if(await this._context.Users.AnyAsync(x => x.Email.Equals(request.Email))) {
 			if(redirectToLogin) { // just redirect to login?
-				return await Login(request, provideRefresh, refreshJwtInBody);
+				return await this.Login(request, provideRefresh, refreshJwtInBody);
 			} else { // or tell him to fuck off?
-				return Conflict(nameof(request.Email));
+				return this.Conflict(nameof(request.Email));
 			}
 		}
 
@@ -236,18 +232,18 @@ public sealed class AuthController : ControllerBase
 			RefreshTokensEntropies = new(0),
 		};
 
-		_logger.LogDebug($"Added new user:\n" +
+		this._logger.LogDebug($"Added new user:\n" +
 			$"==> Email: \'{toAdd.Email}\'\n" +
 			$"==> PassHashB64: \'{Convert.ToBase64String(toAdd.PasswordHash)}\'\n" +
 			$"==> PassSaltB64: \'{Convert.ToBase64String(toAdd.PasswordSalt)}\'");
 
-		_context.Users.Add(toAdd);
-		await _context.SaveChangesAsync();
+		this._context.Users.Add(toAdd);
+		await this._context.SaveChangesAsync();
 
 		/* let the Login endpoint generate JWTs, moreover 
 		 * it will validate registration succeeded
 		 */
-		return await Login(request, provideRefresh, refreshJwtInBody);
+		return await this.Login(request, provideRefresh, refreshJwtInBody);
 	}
 
 
@@ -261,7 +257,7 @@ public sealed class AuthController : ControllerBase
 	[AllowAnonymous]
 	public async Task<IActionResult> RenewJwt([FromBody] RefreshJwtRequest? request)
 	{
-		var fromCookie = Request.Cookies[JwtRefreshTokenCookieName];
+		var fromCookie = this.Request.Cookies[JwtRefreshTokenCookieName];
 		var fromBody = request?.RefreshToken;
 		string jwt;
 		bool refreshJwtInBody;
@@ -275,18 +271,18 @@ public sealed class AuthController : ControllerBase
 			jwt = fromBody;
 			refreshJwtInBody = true;
 		} else {
-			return BadRequest(ErrorMessages.RefreshJwtIsExpectedInCookiesXorBody);
+			return this.BadRequest(ErrorMessages.RefreshJwtIsExpectedInCookiesXorBody);
 		}
 
-		var (foundUserAsTracking, errorResult) = await ValidateAndRemoveRefreshJWT(jwt);
+		var (foundUserAsTracking, errorResult) = await this.ValidateAndRemoveRefreshJWT(jwt);
 		if(errorResult is not null) {
 			return errorResult;
 		}
 
 		// foundUser is guaranteed to be not null IF errorResult is null
-		var newToken = IssueJwtAndAddToUser(foundUserAsTracking!, true, refreshJwtInBody);
-		await _context.SaveChangesAsync();
-		return Ok(newToken);
+		var newToken = this.IssueJwtAndAddToUser(foundUserAsTracking!, true, refreshJwtInBody);
+		await this._context.SaveChangesAsync();
+		return this.Ok(newToken);
 	}
 
 
@@ -298,51 +294,51 @@ public sealed class AuthController : ControllerBase
 	[Route("other-sessions")]
 	public async Task<IActionResult> DeleteAllOtherDevices()
 	{
-		var refreshJwt = Request.Cookies[JwtRefreshTokenCookieName];
+		var refreshJwt = this.Request.Cookies[JwtRefreshTokenCookieName];
 
 		if(refreshJwt is null) {
-			return BadRequest(ErrorMessages.RefreshJwtIsExpectedInCookies);
+			return this.BadRequest(ErrorMessages.RefreshJwtIsExpectedInCookies);
 		}
 
-		var (foundUserAsTracking, errorResult) = await ValidateAndRemoveRefreshJWT(refreshJwt);
+		var (foundUserAsTracking, errorResult) = await this.ValidateAndRemoveRefreshJWT(refreshJwt);
 		if(errorResult is not null) {
 			return errorResult;
 		}
 
 		// foundUser is guaranteed to be not null IF errorResult is null
 		foundUserAsTracking!.RefreshTokensEntropies = new(1);
-		var newToken = IssueJwtAndAddToUser(foundUserAsTracking!);
-		await _context.SaveChangesAsync();
-		return Ok(newToken);
+		var newToken = this.IssueJwtAndAddToUser(foundUserAsTracking!);
+		await this._context.SaveChangesAsync();
+		return this.Ok(newToken);
 	}
 
 	[HttpDelete]
 	[Route("self")]
 	public async Task<IActionResult> TerminateSession()
 	{
-		var refreshJwt = Request.Cookies[JwtRefreshTokenCookieName];
+		var refreshJwt = this.Request.Cookies[JwtRefreshTokenCookieName];
 
 		if(refreshJwt is null) {
-			return BadRequest(ErrorMessages.RefreshJwtIsExpectedInCookies);
+			return this.BadRequest(ErrorMessages.RefreshJwtIsExpectedInCookies);
 		}
 
 		// simply do validate without issuing the new one
-		var (foundUserAsTracking, errorResult) = await ValidateAndRemoveRefreshJWT(refreshJwt);
+		var (foundUserAsTracking, errorResult) = await this.ValidateAndRemoveRefreshJWT(refreshJwt);
 		if(errorResult is not null) {
 			return errorResult;
 		}
 
-		await _context.SaveChangesAsync();
-		return Ok();
+		await this._context.SaveChangesAsync();
+		return this.Ok();
 	}
 
 	[HttpPatch]
 	[Route("password")]
 	public async Task<IActionResult> ChangePassword([FromBody][Required] ChangePasswordRequest request)
 	{
-		var user = await _context.Users.FirstOrDefaultAsync();
+		var user = await this._context.Users.FirstOrDefaultAsync();
 		if(user is null) {
-			return NotFound();
+			return this.NotFound();
 		}
 
 		var passHash = PasswordsService.HashPassword(request.Password, out var passSalt);
@@ -350,10 +346,10 @@ public sealed class AuthController : ControllerBase
 		user.PasswordHash = passHash;
 
 		try {
-			await _context.SaveChangesAsync();
-			return Ok();
+			await this._context.SaveChangesAsync();
+			return this.Ok();
 		} catch {
-			return Problem();
+			return this.Problem();
 		}
 	}
 }

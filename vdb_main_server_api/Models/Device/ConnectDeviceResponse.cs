@@ -1,14 +1,14 @@
-﻿using vdb_node_api.Models.NodeApi;
+﻿using ServicesLayer.Models.NodeApi;
 
-namespace main_server_api.Models.UserApi.Application.Device;
+namespace main_server_api.Models.Device;
 
-public class ConnectDeviceResponse :AddPeerResponse
+public class ConnectDeviceResponse : AddPeerResponse
 {
 	public string AddedPeerPublicKey { get; set; }
 	public string ServerIpAddress { get; set; }
 	public int WireguardPort { get; set; }
 
-	public ConnectDeviceResponse(AddPeerResponse peerResponse, string peerPubkey, string serverIp, int wgPort) 
+	public ConnectDeviceResponse(AddPeerResponse peerResponse, string peerPubkey, string serverIp, int wgPort)
 		: base(peerResponse.AllowedIps, peerResponse.InterfacePublicKey)
 	{
 		this.AddedPeerPublicKey = peerPubkey;

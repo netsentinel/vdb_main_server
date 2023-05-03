@@ -1,19 +1,17 @@
 using DataAccessLayer.Contexts;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption.ConfigurationModel;
-using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
+using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption.ConfigurationModel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
-using vdb_main_server_api.Services;
 using ServicesLayer.Services;
 
 
 #if DEBUG
 #endif
 
-namespace vdb_main_server_api;
+namespace main_server_api;
 
 internal class Program
 {

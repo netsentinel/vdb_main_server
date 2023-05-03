@@ -1,10 +1,5 @@
 ﻿using DataAccessLayer.Models;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DataAccessLayer.Contexts;
 
@@ -26,8 +21,7 @@ public class VpnContext : DbContext
 	{
 		base.OnModelCreating(modelBuilder);
 
-		modelBuilder.Entity<User>(entity =>
-		{
+		modelBuilder.Entity<User>(entity => {
 			entity.HasAlternateKey(u => u.Email);
 		});
 

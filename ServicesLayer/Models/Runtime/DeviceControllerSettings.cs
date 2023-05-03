@@ -1,4 +1,4 @@
-﻿namespace main_server_api.Models.Runtime;
+﻿namespace ServicesLayer.Models.Runtime;
 
 public class AccessLevelToDevicesLimit
 {

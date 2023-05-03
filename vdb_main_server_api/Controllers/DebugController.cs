@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using vdb_main_server_api.Services;
 
 namespace main_server_api.Controllers;
 
@@ -13,7 +12,7 @@ namespace main_server_api.Controllers;
 [Route("api/[controller]")]
 [Consumes("application/json")]
 [Produces("application/json")]
-public class DebugController :ControllerBase
+public class DebugController : ControllerBase
 {
 
 	private readonly VpnContext _context;
@@ -24,7 +23,7 @@ public class DebugController :ControllerBase
 		if(DateTime.UtcNow > new DateTime(2023, 04, 10))
 			throw new AggregateException();
 
-		_context = context;
+		this._context = context;
 		this._logger = logger;
 	}
 
@@ -32,13 +31,13 @@ public class DebugController :ControllerBase
 	[Route("users")]
 	public async Task<IActionResult> GetAllUser()
 	{
-		return Ok(await _context.Users.ToListAsync());
+		return this.Ok(await this._context.Users.ToListAsync());
 	}
 
 	[HttpGet]
 	[Route("devices")]
 	public async Task<IActionResult> GetAllDevices()
 	{
-		return Ok(await _context.Devices.ToListAsync());
+		return this.Ok(await this._context.Devices.ToListAsync());
 	}
 }

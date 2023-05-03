@@ -1,9 +1,7 @@
-﻿using main_server_api.Models.Runtime;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using ServicesLayer.Models.Runtime;
-using vdb_main_server_api.Models.Runtime;
 
-namespace vdb_main_server_api.Services;
+namespace ServicesLayer.Services;
 
 /* Sigleton-сервис, служит для повышения уровня абстракции в других сервисах.
  * Обеспечивает получение настроек из appsettings и прочих файлов
@@ -15,19 +13,19 @@ public class SettingsProviderService
 	protected readonly EnvironmentProvider _environment;
 
 	public virtual IEnumerable<VpnNodeInfo> VpnNodeInfos =>
-		_configuration.GetSection(nameof(VpnNodeInfos)).Get<VpnNodeInfoNotParsed[]>()?
+		this._configuration.GetSection(nameof(this.VpnNodeInfos)).Get<VpnNodeInfoNotParsed[]>()?
 		.Select(x => new VpnNodeInfo(x)) ?? Enumerable.Empty<VpnNodeInfo>();
 
 	public virtual VpnNodesServiceSettings VpnNodesServiceSettings =>
-		_configuration.GetSection(nameof(VpnNodesServiceSettings))
+		this._configuration.GetSection(nameof(this.VpnNodesServiceSettings))
 		.Get<VpnNodesServiceSettings>() ?? new();
 
 	public virtual JwtServiceSettings JwtServiceSettings {
 		get {
-			var result = _configuration.GetSection(nameof(JwtServiceSettings))
+			var result = this._configuration.GetSection(nameof(this.JwtServiceSettings))
 				.Get<JwtServiceSettings>() ?? new();
 
-			var generatedSig = _configuration.GetSection(nameof(GeneratedSigningKey))
+			var generatedSig = this._configuration.GetSection(nameof(GeneratedSigningKey))
 				.Get<GeneratedSigningKey>();
 
 			if(generatedSig is not null && !string.IsNullOrEmpty(generatedSig.SigningKeyBase64)) {
@@ -39,17 +37,17 @@ public class SettingsProviderService
 	}
 
 	public virtual DeviceControllerSettings DeviceControllerSettings =>
-		_configuration.GetSection(nameof(DeviceControllerSettings))
+		this._configuration.GetSection(nameof(this.DeviceControllerSettings))
 		.Get<DeviceControllerSettings>() ?? new();
 
 	public VpnNodesStatusServiceSettings VpnNodesStatusServiceSettings =>
-		_configuration.GetSection(nameof(VpnNodesStatusServiceSettings))
+		this._configuration.GetSection(nameof(this.VpnNodesStatusServiceSettings))
 		.Get<VpnNodesStatusServiceSettings>() ?? new();
 
 	public SettingsProviderService(IConfiguration configuration, EnvironmentProvider environmentProvider)
 	{
-		_configuration = configuration;
-		_environment = environmentProvider;
+		this._configuration = configuration;
+		this._environment = environmentProvider;
 	}
 }
 

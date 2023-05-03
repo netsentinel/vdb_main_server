@@ -1,13 +1,13 @@
-﻿namespace vdb_node_api.Models.NodeApi;
+﻿namespace ServicesLayer.Models.NodeApi;
 
 public class AddPeerResponse
 {
-    public string AllowedIps { get; set; }
-    public string InterfacePublicKey { get; set; }
+	public string AllowedIps { get; set; }
+	public string InterfacePublicKey { get; set; }
 
-    public AddPeerResponse(string allowedIps, string interfacePublicKey)
-    {
-        AllowedIps = allowedIps;
-        InterfacePublicKey = interfacePublicKey;
-    }
+	public AddPeerResponse(string allowedIps, string interfacePublicKey)
+	{
+		this.AllowedIps = allowedIps;
+		this.InterfacePublicKey = interfacePublicKey;
+	}
 }

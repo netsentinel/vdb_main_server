@@ -1,6 +1,4 @@
-﻿using System.Net;
-
-namespace vdb_main_server_api.Models.Runtime;
+﻿namespace ServicesLayer.Models.Runtime;
 
 
 public class VpnNodeInfoNotParsed
@@ -13,5 +11,11 @@ public class VpnNodeInfoNotParsed
 	public bool EnableStatusHmac { get; init; }
 	public int WireguardPort { get; init; }
 	public int ApiTlsPort { get; init; }
+
+	/* This port is used in case of hosting main server on the same server as the node,
+	 * so it cannot be requested to the docker directly. This port is being added to the nginx,
+	 * so it can be requested by the domain name.
+	 */
+	public int? AlternateApiTlsPort { get; init; }
 	public int UserAccessLevelRequired { get; init; }
 }

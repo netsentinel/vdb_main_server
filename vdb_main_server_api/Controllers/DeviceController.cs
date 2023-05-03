@@ -1,18 +1,12 @@
-﻿using Dapper;
-using DataAccessLayer.Contexts;
+﻿using DataAccessLayer.Contexts;
 using DataAccessLayer.Models;
 using main_server_api.Models.Device;
-using main_server_api.Models.Runtime;
-using main_server_api.Models.UserApi.Application.Device;
-using main_server_api.Models.UserApi.Website.Common;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
+using ServicesLayer.Models.Runtime;
+using ServicesLayer.Services;
 using System.ComponentModel.DataAnnotations;
-using System.Security.Claims;
-using vdb_main_server_api.Services;
-using static DataAccessLayer.Models.User;
 
 namespace main_server_api.Controllers;
 
@@ -36,15 +30,15 @@ public class DeviceController : ControllerBase
 	private readonly VpnNodesService _nodesService;
 	private readonly DeviceControllerSettings _settings;
 	private readonly Dictionary<int, int> _accessLevelToDevicesLimit;
-	private static CookieOptions? _jwtCookieOptions;
+	private static readonly CookieOptions? _jwtCookieOptions;
 
 
 	public DeviceController(VpnContext context, VpnNodesService nodesService, SettingsProviderService settingsProvider)
 	{
-		_context = context;
-		_nodesService = nodesService;
-		_settings = settingsProvider.DeviceControllerSettings;
-		_accessLevelToDevicesLimit = _settings.AccessLevelToMaxDevices?
+		this._context = context;
+		this._nodesService = nodesService;
+		this._settings = settingsProvider.DeviceControllerSettings;
+		this._accessLevelToDevicesLimit = this._settings.AccessLevelToMaxDevices?
 			.ToDictionary(x => x.AccessLevel, x => x.DevicesLimit) ?? new Dictionary<int, int>();
 	}
 
@@ -53,7 +47,7 @@ public class DeviceController : ControllerBase
 	{
 		var accessLevel = (int)userAccessLevel;
 
-		var result = _accessLevelToDevicesLimit.TryGetValue(accessLevel, out var limit) ?
+		var result = this._accessLevelToDevicesLimit.TryGetValue(accessLevel, out var limit) ?
 			limit : accessLevel * 3 + 1; // lowest: 1, highest: 13
 
 #if DEBUG
@@ -66,7 +60,7 @@ public class DeviceController : ControllerBase
 	[HttpGet]
 	public async Task<IActionResult> ListDevices()
 	{
-		return Ok(await _context.Devices
+		return this.Ok(await this._context.Devices
 			.Where(x => x.UserId == this.ParseIdClaim()).ToListAsync());
 	}
 
@@ -74,35 +68,35 @@ public class DeviceController : ControllerBase
 	public async Task<IActionResult> AddNewDevice([FromBody][Required] AddDeviceRequest request)
 	{
 		if(!this.ValidatePubkey(request.WireguardPublicKey, 256 / 8)) {
-			return BadRequest(ErrorMessages.WireguardPublicKeyFormatInvalid);
+			return this.BadRequest(ErrorMessages.WireguardPublicKeyFormatInvalid);
 		}
 
-		if(await _context.Devices.AnyAsync(x => x.WireguardPublicKey == request.WireguardPublicKey)) {
-			return Conflict(ErrorMessages.WireguardPublicKeyAlreadyExists);
+		if(await this._context.Devices.AnyAsync(x => x.WireguardPublicKey == request.WireguardPublicKey)) {
+			return this.Conflict(ErrorMessages.WireguardPublicKeyAlreadyExists);
 		}
 
 		var userId = this.ParseIdClaim();
-		var userAccessLevel = (await _context.Users.AsNoTracking()
+		var userAccessLevel = (await this._context.Users.AsNoTracking()
 			.FirstOrDefaultAsync(x => x.Id == userId))?.GetAccessLevel();
 
 		if(userAccessLevel is null) {
-			return UnprocessableEntity(ErrorMessages.AccessJwtUserNotFound);
+			return this.UnprocessableEntity(ErrorMessages.AccessJwtUserNotFound);
 		}
 
-		var devicesCount = await _context.Devices.CountAsync(x => x.UserId == userId);
-		if(devicesCount >= GetDevicesLimit(userAccessLevel.Value)) {
-			return Conflict(ErrorMessages.DevicesLimitReached);
+		var devicesCount = await this._context.Devices.CountAsync(x => x.UserId == userId);
+		if(devicesCount >= this.GetDevicesLimit(userAccessLevel.Value)) {
+			return this.Conflict(ErrorMessages.DevicesLimitReached);
 		}
 
-		var added = _context.Devices.Add(new UserDevice {
+		var added = this._context.Devices.Add(new UserDevice {
 			UserId = userId,
 			WireguardPublicKey = request.WireguardPublicKey,
 			LastConnectedNodeId = null,
 			LastSeenUtc = DateTime.UtcNow
 		});
 
-		await _context.SaveChangesAsync();
-		return StatusCode(StatusCodes.Status201Created);
+		await this._context.SaveChangesAsync();
+		return this.StatusCode(StatusCodes.Status201Created);
 	}
 
 
@@ -114,25 +108,25 @@ public class DeviceController : ControllerBase
 	[HttpPatch]
 	public async Task<IActionResult> DeleteDevice([FromBody][Required] DeleteDeviceRequest request)
 	{
-		int userId = this.ParseIdClaim();
+		var userId = this.ParseIdClaim();
 
-		var toDelete = await _context.Devices.FirstOrDefaultAsync(d =>
+		var toDelete = await this._context.Devices.FirstOrDefaultAsync(d =>
 			d.WireguardPublicKey == request.WireguardPublicKey && d.UserId == userId);
 
 		if(toDelete is null) {
-			return NotFound();
+			return this.NotFound();
 		}
 
 		if(toDelete.LastConnectedNodeId is not null) {
 			// not awaited, fire-and-forget
-			_ = _nodesService.RemovePeerFromNode(
+			_ = this._nodesService.RemovePeerFromNode(
 				toDelete.WireguardPublicKey, toDelete.LastConnectedNodeId.Value);
 		}
 
-		_context.Remove(toDelete);
-		await _context.SaveChangesAsync();
+		this._context.Remove(toDelete);
+		await this._context.SaveChangesAsync();
 
-		return Accepted(); // because we did not await one of the calls above 
+		return this.Accepted(); // because we did not await one of the calls above 
 	}
 
 

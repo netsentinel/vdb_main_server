@@ -1,4 +1,4 @@
-﻿namespace vdb_main_server_api.Models.Services;
+﻿namespace ServicesLayer.Models.Services;
 
 public class PublicNodeInfo
 {

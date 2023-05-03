@@ -1,8 +1,8 @@
-﻿using System.Net;
+﻿using DataAccessLayer.Models;
+using System.Net;
 using System.Security.Cryptography;
-using DataAccessLayer.Models;
 
-namespace vdb_main_server_api.Models.Runtime;
+namespace ServicesLayer.Models.Runtime;
 
 public class VpnNodeInfo
 {
@@ -14,6 +14,7 @@ public class VpnNodeInfo
 	public string? ComputedKeyHmac { get; init; }
 	public int WireguardPort { get; init; }
 	public int ApiTlsPort { get; init; }
+	public int? AlternateApiTlsPort { get; init; }
 	public User.AccessLevels UserAccessLevelRequired { get; init; }
 
 	public VpnNodeInfo(int id, string name, IPAddress ipAddress, string secretAccessKeyBase64, bool enableStatusHmac,
@@ -39,17 +40,17 @@ public class VpnNodeInfo
 		this.ComputedKeyHmac = this.EnableStatusHmac && notParsed.SecretHmacKeyBase64 is not null ?
 			Convert.ToBase64String(HMACSHA512.HashData(
 				Convert.FromBase64String(notParsed.SecretHmacKeyBase64),
-				Convert.FromBase64String(notParsed.SecretAccessKeyBase64))) 
+				Convert.FromBase64String(notParsed.SecretAccessKeyBase64)))
 			: null;
 		this.WireguardPort = notParsed.WireguardPort;
 		this.ApiTlsPort = notParsed.ApiTlsPort;
+		this.AlternateApiTlsPort = notParsed.AlternateApiTlsPort;
 		this.UserAccessLevelRequired = (User.AccessLevels)notParsed.UserAccessLevelRequired;
 	}
 
 	public VpnNodeInfoNotParsed ToNotParsed()
 	{
-		return new VpnNodeInfoNotParsed
-		{
+		return new VpnNodeInfoNotParsed {
 			Id = this.Id,
 			Name = this.Name,
 			IpAddress = this.IpAddress.ToString(),
