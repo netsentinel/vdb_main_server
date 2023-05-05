@@ -89,15 +89,22 @@ public sealed class AuthController : ControllerBase
 			responseObj.RefreshToken = refreshToken;
 		} else {
 			// if static is not inited yet
-			if(_jwtCookieOptions is null) {
+			if(_jwtCookieOptions is null
+#if DEBUG
+				|| true
+#endif
+				) {
 				_jwtCookieOptions = new CookieOptions() {
 #if RELEASE
-					HttpOnly = true,
 					Secure = true,
 					SameSite = SameSiteMode.Strict,
-					Path = "/api/auth/refresh",
-					IsEssential = true,
+#else
+					Secure = false,
+					SameSite = SameSiteMode.Lax,
 #endif
+					HttpOnly = true,
+					IsEssential = true,
+					Path = "/api/auth",
 					MaxAge = this._jwtService.RefreshTokenLifespan
 				};
 			}

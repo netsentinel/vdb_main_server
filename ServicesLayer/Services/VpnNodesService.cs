@@ -101,7 +101,7 @@ public sealed class VpnNodesService : BackgroundService
 			throw new KeyNotFoundException($"Node with name \'{nodeName}\' was not found.");
 
 		testedNode.nodeStatus.IsActive = await this.CheckIsNodeAccessible(nodeName, false);
-		if(!testedNode.nodeStatus.IsActive)
+		if(!testedNode.nodeStatus.IsActive && testedNode.nodeInfo.AlternateApiTlsPort is not null)
 			testedNode.nodeStatus.IsActive = await this.CheckIsNodeAccessible(nodeName, true);
 
 		this._logger.LogInformation($"Node \'{testedNode.nodeInfo.Name}\' is accessible: {testedNode.nodeStatus.IsActive}.");
