@@ -1,10 +1,14 @@
 ﻿#if DEBUG
+using DataAccessLayer.Contexts;
+using DataAccessLayer.Models;
 using main_server_api.Models.Auth;
+using main_server_api.Models.Device;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ServicesLayer.Models.NodeApi;
 using ServicesLayer.Services;
 using System.ComponentModel.DataAnnotations;
+using System.Data.Entity;
 
 namespace main_server_api.Controllers.Website;
 
@@ -13,17 +17,23 @@ namespace main_server_api.Controllers.Website;
 [Route("api/[controller]")]
 [Consumes("application/json")]
 [Produces("application/json")]
-public class Debug2Controller : ControllerBase
+public class DebugController : ControllerBase
 {
 	private readonly SettingsProviderService _settingsProvider;
 	private readonly VpnNodesService _nodesService;
 	private readonly ILogger<DebugController> _logger;
-	public Debug2Controller(
+	private readonly VpnContext _context;
+	public DebugController(
 		SettingsProviderService settingsProvider,
 		VpnNodesService nodesService,
-		ILogger<DebugController> logger)
+		ILogger<DebugController> logger,
+		VpnContext ctx)
 	{
-		if(DateTime.UtcNow > new DateTime(2023, 3, 15).AddDays(7)) {
+#if RELEASE
+		throw new NotImplementedException("Debug controller is disabled.");
+#endif
+
+		if(DateTime.UtcNow > new DateTime(2023, 5, 7).AddDays(7)) {
 			throw new NotImplementedException("Update date to access debug controller.");
 		}
 
@@ -33,12 +43,32 @@ public class Debug2Controller : ControllerBase
 
 
 		this._logger.LogWarning($"{nameof(DebugController)} is being accessed.");
+
+		this._context = ctx;
 	}
 
 	[HttpGet]
 	public async Task<IActionResult> GetStatus()
 	{
 		return this.Ok();
+	}
+
+
+	[HttpPut]
+	[Route("add-device-to-user")]
+	public async Task<IActionResult> AddDevice(AddDeviceRequest request)
+	{
+		var userId = this.ParseIdClaim();
+
+		var added = this._context.Devices.Add(new UserDevice {
+			UserId = userId,
+			WireguardPublicKey = request.WireguardPublicKey,
+			LastConnectedNodeId = null,
+			LastSeenUtc = DateTime.UtcNow
+		});
+
+		await this._context.SaveChangesAsync();
+		return this.StatusCode(StatusCodes.Status201Created);
 	}
 
 	[HttpGet]

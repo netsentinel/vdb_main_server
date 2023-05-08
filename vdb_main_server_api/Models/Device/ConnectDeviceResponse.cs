@@ -15,4 +15,11 @@ public class ConnectDeviceResponse : AddPeerResponse
 		this.ServerIpAddress = serverIp;
 		this.WireguardPort = wgPort;
 	}
+	public ConnectDeviceResponse(string allowedIps, string interfacePublicKey, string peerPubkey, string serverIp, int wgPort)
+	: base(allowedIps, interfacePublicKey)
+	{
+		this.AddedPeerPublicKey = peerPubkey;
+		this.ServerIpAddress = serverIp;
+		this.WireguardPort = wgPort;
+	}
 }
