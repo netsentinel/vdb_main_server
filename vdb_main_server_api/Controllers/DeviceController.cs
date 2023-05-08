@@ -39,7 +39,8 @@ public class DeviceController : ControllerBase
 		this._nodesService = nodesService;
 		this._settings = settingsProvider.DeviceControllerSettings;
 		this._accessLevelToDevicesLimit = this._settings.AccessLevelToMaxDevices?
-			.ToDictionary(x => x.AccessLevel, x => x.DevicesLimit) ?? new Dictionary<int, int>();
+			.ToDictionary(x => x.AccessLevel, x => x.DevicesLimit * _settings.DevicesLimitMultiplier)
+			?? new Dictionary<int, int>();
 	}
 
 	[NonAction]
@@ -55,6 +56,18 @@ public class DeviceController : ControllerBase
 #else
 		return result;
 #endif
+	}
+
+	[HttpGet]
+	[AllowAnonymous]
+	[Route("user-devices-limits")]
+	public async Task<IActionResult> GetDevicesLimits()
+	{
+		return await Task.Run(() => Ok(this._settings.AccessLevelToMaxDevices?
+			.Select(x => new AccessLevelToDevicesLimit() {
+				AccessLevel = x.AccessLevel,
+				DevicesLimit = x.DevicesLimit * _settings.DevicesLimitMultiplier
+			})));
 	}
 
 	[HttpGet]
