@@ -21,8 +21,7 @@
     - **PATCH /api/device** - deletes existing device from the database using [DeleteDeviceRequest](https://github.com/LuminoDiode/vdb_main_server/blob/master/vdb_main_server_api/Models/Device/DeleteDeviceRequest.cs) body.
     - **DELETE /api/device/{PubkeyBase64Url}** - do the same as above but without RFC 9110 violation.
 - ### CONNECTION (requires authorizaion)
-    - **GET /api/connection** - returns the list of VPN-nodes. The response may be cached by NGINX.
-    - **GET /api/connection/nodes-list** - do the same as above.
+    - **GET /api/connection/nodes-list** - returns the list of VPN-nodes. The response may be cached by NGINX.
     - **PUT /api/connection** - asks the server to add device's pubkey to the selected note using [ConnectDeviceRequest](https://github.com/LuminoDiode/vdb_main_server/blob/master/vdb_main_server_api/Models/Device/ConnectDeviceRequest.cs) body
     
 
