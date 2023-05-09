@@ -31,7 +31,12 @@ public sealed class JwtService
 	{
 		return this._tokenHandler.WriteToken(this._tokenHandler.CreateToken(new SecurityTokenDescriptor {
 			Subject = new ClaimsIdentity(claims),
+#if RELEASE
 			Expires = DateTime.UtcNow.Add(lifespan ?? this.AccessTokenLifespan),
+#else
+			Expires = DateTime.UtcNow.Add(lifespan ?? TimeSpan.FromSeconds(10)),
+#endif 
+			NotBefore = DateTime.UtcNow.AddSeconds(-1), // sometimes server responds so fast that nbf is being in the future so fails client-side validation
 			SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(this._signingKey), SecurityAlgorithms.HmacSha512Signature)
 		}));
 	}

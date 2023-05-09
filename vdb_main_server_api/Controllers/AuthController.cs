@@ -323,9 +323,17 @@ public sealed class AuthController : ControllerBase
 
 	[HttpDelete]
 	[Route("self")]
-	public async Task<IActionResult> TerminateSession()
+	[Route("self/{token}")]
+	public async Task<IActionResult> TerminateSession(string token)
 	{
 		var refreshJwt = this.Request.Cookies[JwtRefreshTokenCookieName];
+
+		if(refreshJwt is not null && token is not null) {
+			return BadRequest(ErrorMessages.RefreshJwtIsExpectedInCookiesXorRoute);
+		} else
+		if(refreshJwt is null) {
+			refreshJwt = token;
+		}
 
 		if(refreshJwt is null) {
 			return this.BadRequest(ErrorMessages.RefreshJwtIsExpectedInCookies);

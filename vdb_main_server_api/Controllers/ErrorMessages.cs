@@ -10,6 +10,8 @@ public static class ErrorMessages
 		@"Refresh JWT is valid but the user it was issued to is not found on the server.";
 	public const string RefreshJwtIsExpectedInCookiesXorBody =
 		@"Refresh JWT must be provided in cookies XOR request body.";
+	public const string RefreshJwtIsExpectedInCookiesXorRoute =
+		@"Refresh JWT must be provided in cookies XOR route body.";
 	public const string RefreshJwtIsExpectedInCookies =
 		@"Refresh JWT must be provided in cookies strictly.";
 
