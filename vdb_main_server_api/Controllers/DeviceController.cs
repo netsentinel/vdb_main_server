@@ -78,14 +78,14 @@ public class DeviceController : ControllerBase
 	}
 
 	[HttpPut]
-	public async Task<IActionResult> AddNewDevice([FromBody][Required] AddDeviceRequest request, [FromQuery] bool okIfExists = true)
+	public async Task<IActionResult> AddNewDevice([FromBody][Required] AddDeviceRequest request)
 	{
 		if(!this.ValidatePubkey(request.WireguardPublicKey, 256 / 8)) {
 			return this.BadRequest(ErrorMessages.WireguardPublicKeyFormatInvalid);
 		}
 
 		if(await this._context.Devices.AnyAsync(x => x.WireguardPublicKey == request.WireguardPublicKey)) {
-			return okIfExists ? this.Ok() : this.Conflict(ErrorMessages.WireguardPublicKeyAlreadyExists);
+			return this.Problem(ErrorMessages.WireguardPublicKeyAlreadyExists, statusCode: StatusCodes.Status303SeeOther);
 		}
 
 		var userId = this.ParseIdClaim();

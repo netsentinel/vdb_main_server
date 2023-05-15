@@ -79,8 +79,10 @@ public class ConnectionController : ControllerBase
 	{
 		var userId = this.ParseIdClaim();
 
-		var foundDevice = this._context.Devices.Where(x => x.UserId == this.ParseIdClaim())
-			.FirstOrDefault(x => x.WireguardPublicKey == request.WireguardPublicKey);
+		var foundDevice = this._context.Devices
+			.FirstOrDefault(x => 
+				x.WireguardPublicKey == request.WireguardPublicKey &&
+				x.UserId == this.ParseIdClaim());
 
 		if(foundDevice is null) {
 			// device does not exist for the user, reset it locally and relogin
