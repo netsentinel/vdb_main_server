@@ -78,16 +78,21 @@ public class DeviceController : ControllerBase
 	}
 
 	[HttpPut]
-	public async Task<IActionResult> AddNewDevice([FromBody][Required] AddDeviceRequest request)
+	public async Task<IActionResult> AddNewDevice([FromBody][Required] AddDeviceRequest request, [FromQuery] bool allowDuplicate = false)
 	{
 		if(!this.ValidatePubkey(request.WireguardPublicKey, 256 / 8)) {
 			return this.BadRequest(ErrorMessages.WireguardPublicKeyFormatInvalid);
 		}
 
-		if(await this._context.Devices.AnyAsync(x => x.WireguardPublicKey == request.WireguardPublicKey)) {
-			return this.Problem(ErrorMessages.WireguardPublicKeyAlreadyExists, statusCode: StatusCodes.Status303SeeOther);
-		}
+		var found = await this._context.Devices.FirstOrDefaultAsync(x => x.WireguardPublicKey == request.WireguardPublicKey);
+		if(found is not null) {
 
+			return this.Problem(ErrorMessages.WireguardPublicKeyAlreadyExists, statusCode:
+				(allowDuplicate && found.UserId == this.ParseIdClaim())
+				? StatusCodes.Status302Found
+				: StatusCodes.Status303SeeOther);
+		}
+		 
 		var userId = this.ParseIdClaim();
 		var userAccessLevel = (await this._context.Users.AsNoTracking()
 			.FirstOrDefaultAsync(x => x.Id == userId))?.GetAccessLevel();
