@@ -22,7 +22,7 @@
 - ### DEVICE (requires authorizaion)
     - **GET /api/device/user-devices-limits** [ANONYMOUS] - returns common limitations for the different user groups.
     - **GET /api/device** - returns list of devices for current user.
-    - **PUT /api/device[?okIfExists=true]** - adds new device to the database using [AddDeviceRequest](https://github.com/LuminoDiode/vdb_main_server/blob/master/vdb_main_server_api/Models/Device/AddDeviceRequest.cs) body. May return 200_OK instead of 409_CONFLICT in case of key already exists for the user if okIfExists was set to true in the query.
+    - **PUT /api/device[?allowDuplicate=true]** - adds new device to the database using [AddDeviceRequest](https://github.com/LuminoDiode/vdb_main_server/blob/master/vdb_main_server_api/Models/Device/AddDeviceRequest.cs) body. May return 200_OK instead of 409_CONFLICT in case of key already exists for the user if allowDuplicate was set to true in the query.
     - **PATCH /api/device** - deletes existing device from the database using [DeleteDeviceRequest](https://github.com/LuminoDiode/vdb_main_server/blob/master/vdb_main_server_api/Models/Device/DeleteDeviceRequest.cs) body.
     - **DELETE /api/device/{PubkeyBase64Url}** - do the same as above but without RFC 9110 violation.
 - ### CONNECTION (requires authorizaion)
