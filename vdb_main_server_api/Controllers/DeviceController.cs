@@ -27,13 +27,13 @@ namespace main_server_api.Controllers;
 public class DeviceController : ControllerBase
 {
 	private readonly VpnContext _context;
-	private readonly VpnNodesService _nodesService;
+	private readonly VpnNodesManipulator _nodesService;
 	private readonly DeviceControllerSettings _settings;
 	private readonly Dictionary<int, int> _accessLevelToDevicesLimit;
 	private static readonly CookieOptions? _jwtCookieOptions;
 
 
-	public DeviceController(VpnContext context, VpnNodesService nodesService, SettingsProviderService settingsProvider)
+	public DeviceController(VpnContext context, VpnNodesManipulator nodesService, SettingsProviderService settingsProvider)
 	{
 		this._context = context;
 		this._nodesService = nodesService;
@@ -138,7 +138,7 @@ public class DeviceController : ControllerBase
 		if(toDelete.LastConnectedNodeId is not null) {
 			// not awaited, fire-and-forget
 			_ = this._nodesService.RemovePeerFromNode(
-				toDelete.WireguardPublicKey, toDelete.LastConnectedNodeId.Value);
+				toDelete.LastConnectedNodeId.Value, toDelete.WireguardPublicKey);
 		}
 
 		this._context.Remove(toDelete);

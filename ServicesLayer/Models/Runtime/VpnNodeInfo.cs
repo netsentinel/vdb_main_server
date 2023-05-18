@@ -37,8 +37,8 @@ public class VpnNodeInfo
 		this.IpAddress = IPAddress.Parse(notParsed.IpAddress);
 		this.SecretAccessKeyBase64 = notParsed.SecretAccessKeyBase64;
 		this.EnableStatusHmac = notParsed.EnableStatusHmac;
-		this.ComputedKeyHmac = this.EnableStatusHmac && notParsed.SecretHmacKeyBase64 is not null ?
-			Convert.ToBase64String(HMACSHA512.HashData(
+		this.ComputedKeyHmac = this.EnableStatusHmac && notParsed.SecretHmacKeyBase64 is not null
+			? Convert.ToBase64String(HMACSHA512.HashData(
 				Convert.FromBase64String(notParsed.SecretHmacKeyBase64),
 				Convert.FromBase64String(notParsed.SecretAccessKeyBase64)))
 			: null;

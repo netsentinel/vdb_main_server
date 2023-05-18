@@ -10,8 +10,7 @@ namespace ServicesLayer.Services;
 public class SettingsProviderService
 {
 	protected readonly IConfiguration _configuration;
-	protected readonly EnvironmentProvider _environment;
-
+	
 	public virtual IEnumerable<VpnNodeInfo> VpnNodeInfos =>
 		this._configuration.GetSection(nameof(this.VpnNodeInfos)).Get<VpnNodeInfoNotParsed[]>()?
 		.Select(x => new VpnNodeInfo(x)) ?? Enumerable.Empty<VpnNodeInfo>();
@@ -40,14 +39,13 @@ public class SettingsProviderService
 		this._configuration.GetSection(nameof(this.DeviceControllerSettings))
 		.Get<DeviceControllerSettings>() ?? new();
 
-	public VpnNodesStatusServiceSettings VpnNodesStatusServiceSettings =>
+	public virtual VpnNodesStatusServiceSettings VpnNodesStatusServiceSettings =>
 		this._configuration.GetSection(nameof(this.VpnNodesStatusServiceSettings))
 		.Get<VpnNodesStatusServiceSettings>() ?? new();
 
-	public SettingsProviderService(IConfiguration configuration, EnvironmentProvider environmentProvider)
+	public SettingsProviderService(IConfiguration configuration)
 	{
 		this._configuration = configuration;
-		this._environment = environmentProvider;
 	}
 }
 

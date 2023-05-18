@@ -15,13 +15,13 @@ namespace main_server_api.Controllers;
 public class ConnectionController : ControllerBase
 {
 	private readonly VpnContext _context;
-	private readonly VpnNodesService _nodesService;
-	private readonly VpnNodesStatusService _statusService;
+	private readonly VpnNodesManipulator _nodesService;
+	private readonly NodesPublicInfoService _statusService;
 	private readonly ILogger<ConnectionController> _logger;
 	public ConnectionController(
 		VpnContext context,
-		VpnNodesService nodesService,
-		VpnNodesStatusService statusService,
+		VpnNodesManipulator nodesService,
+		NodesPublicInfoService statusService,
 		ILogger<ConnectionController> logger)
 	{
 		this._context = context;
@@ -30,12 +30,14 @@ public class ConnectionController : ControllerBase
 		this._logger = logger;
 	}
 
+	// This endpoint is HIGHLY recommended to be cached using reverse-proxy, i.e. NGINX
+	// i.e. proxy_cache any 1m; 
 	[HttpGet]
 	[AllowAnonymous]
 	[Route("nodes-list")]
-	public async Task<IActionResult> GetNodesList()
+	public async Task<IActionResult> GetNodesList([FromServices] NodesPublicInfoService reporter)
 	{
-		return await Task.Run(() => this.Ok(this._statusService.Statuses));
+		return await Task.Run(() => this.Ok(reporter.GenerateReport()));
 	}
 
 	/* TODO: Создать сервис отложенного отключения.
@@ -101,7 +103,7 @@ public class ConnectionController : ControllerBase
 			try {
 				// not awaited, fire-and-forget
 				_ = this._nodesService.RemovePeerFromNode(
-					foundDevice.WireguardPublicKey, foundDevice.LastConnectedNodeId.Value);
+					 foundDevice.LastConnectedNodeId.Value, foundDevice.WireguardPublicKey);
 			} catch { }
 		}
 
@@ -109,9 +111,9 @@ public class ConnectionController : ControllerBase
 		try {
 			this._logger.LogInformation($"Sending CONNECTION request for device with ID={foundDevice.Id}" +
 				$"to node with ID={foundDevice.LastConnectedNodeId}...");
-			var addResult = await this._nodesService.AddPeerToNode(foundDevice.WireguardPublicKey, request.NodeId);
+			var addResult = await this._nodesService.AddPeerToNode(request.NodeId, foundDevice.WireguardPublicKey);
 			if(addResult is not null && addResult.InterfacePublicKey is not null) {
-				var node = this._nodesService.NameToNode[this._nodesService.GetNodeNameById(request.NodeId)].nodeInfo;
+				var node = this._nodesService.IdToNode[request.NodeId].nodeInfo;
 				await this._context.SaveChangesAsync();
 				return this.Ok(new ConnectDeviceResponse(addResult,
 					request.WireguardPublicKey, node.IpAddress.ToString(), node.WireguardPort));
@@ -124,7 +126,7 @@ public class ConnectionController : ControllerBase
 			try {
 				// not awaited, fire-and-forget
 				_ = this._nodesService.RemovePeerFromNode( // LastConnectedNodeId is not null here!
-					foundDevice.WireguardPublicKey, foundDevice.LastConnectedNodeId.Value);
+					foundDevice.LastConnectedNodeId.Value, foundDevice.WireguardPublicKey);
 			} catch { }
 			this._logger.LogInformation($"Unable to add pubkey \'{request.WireguardPublicKey.Substring(0, 3)}...\' " +
 				$"to node {request.NodeId}: \'{ex.Message}\'.");

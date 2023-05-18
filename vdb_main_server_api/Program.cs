@@ -43,7 +43,6 @@ internal class Program
 			opts.RequireHttpsMetadata = false;
 			opts.SaveToken = false;
 
-			var env = new EnvironmentProvider(null);
 			opts.TokenValidationParameters = new TokenValidationParameters {
 				ValidateIssuerSigningKey = true,
 				/* echo "{\"GeneratedSigningKey\":{\"SigningKeyBase64\":
@@ -62,13 +61,13 @@ internal class Program
 			builder.Services.AddSwaggerGen();
 		}
 
-		builder.Services.AddSingleton<EnvironmentProvider>();
+		//builder.Services.AddSingleton<EnvironmentProvider>(); // we are not really into env vars in this app...
 		builder.Services.AddSingleton<SettingsProviderService>();
 		builder.Services.AddSingleton<JwtService>();
-		builder.Services.AddSingleton<VpnNodesService>();
-		builder.Services.AddHostedService(pr => pr.GetRequiredService<VpnNodesService>());
-		builder.Services.AddSingleton<VpnNodesStatusService>();
-		builder.Services.AddHostedService(pr => pr.GetRequiredService<VpnNodesStatusService>());
+		builder.Services.AddSingleton<VpnNodesManipulator>();
+		builder.Services.AddSingleton<NodesPublicInfoService>();
+		builder.Services.AddSingleton<NodesCleanupBackgroundService>();
+		builder.Services.AddHostedService(pr => pr.GetRequiredService<NodesCleanupBackgroundService>());
 
 		builder.Services.AddDbContext<VpnContext>(opts => {
 			opts.UseNpgsql(builder.Environment.IsDevelopment()
