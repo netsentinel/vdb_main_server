@@ -32,13 +32,6 @@
 
 
 ## Full list of environment variables
-- ### NGINX
-    - **VDB_LIMIT_REQ** - limit requests per second for every address (0.1 = 6 requests per minute etc.).
-        - Valid range: 0.001<VALUE<10^7. 
-        - Default: 100000.
-    - **VDB_ALLOWED_IP** - allow requests only from specified address. 
-        - Valid range: any IP-address. 
-        - Default: *all*.
 - ### ASP WebAPI
     - **VDB_GENERATE_JWT_SIG** - generate random JWT signing key on container first run.
         - Valid range: true/false.
