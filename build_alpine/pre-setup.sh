@@ -4,20 +4,6 @@ if ! ((test -e /etc/ssl/private/nginx-selfsigned.key) && (test -e /etc/ssl/certs
     openssl req -x509 -nodes -days 36500 -newkey rsa:2048 -subj "/CN=US/C=US/L=San Fransisco" -keyout /etc/ssl/private/nginx-selfsigned.key -out /etc/ssl/certs/nginx-selfsigned.crt
 fi
 
-# check limit req is valid
-if !((VDB_LIMIT_REQ > 0)) && ((VDB_LIMIT_REQ <= 9999999)); then
-    echo "Incorrect value of VDB_LIMIT_REQ environment variable was ignored."
-    echo "VDB_LIMIT_REQ was set to 100k."
-    VDB_LIMIT_REQ=100000
-fi
-
-# gen nginx limit req file
-if ! test -e "/etc/nginx/snippets/nginx-limit_req.conf"; then
-    echo "Nginx limit_req configuration file not detected. Generating..."
-    cp /etc/rest2wg/pre-nginx-limit_req.conf.template /etc/nginx/snippets/nginx-limit_req.conf
-    echo "${VDB_LIMIT_REQ}r/s;" >> /etc/nginx/snippets/nginx-limit_req.conf
-fi
-
 # check allowed ips is valid
 if (testvar='all' && [[ $VDB_ALLOWED_IP = $testvar ]]); then
     unset testvar;

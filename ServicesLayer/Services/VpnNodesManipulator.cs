@@ -78,7 +78,7 @@ public sealed class VpnNodesManipulator
 
 		this._idToNode = settingsProvider.VpnNodeInfos.ToDictionary(x => x.Id, x => {
 			var client = new HttpClient(this._httpDefaultHandler);
-			client.Timeout = TimeSpan.FromSeconds(15);
+			client.Timeout = TimeSpan.FromSeconds(10);
 			client.DefaultRequestHeaders.Authorization
 				= new AuthenticationHeaderValue("Key", x.SecretAccessKeyBase64);
 			return (x, new VpnNodeStatus(), client);
@@ -111,12 +111,24 @@ public sealed class VpnNodesManipulator
 
 	#region request-sending functions
 
-	public async Task<WgShortPeerInfo[]?> GetPeersFromNode(int nodeId, bool withCleanup = false)
+	public async Task<string[]?> GetPeersFromNode(int nodeId)
 	{
 		var (nodeInfo, nodeStatus, httpClient) = GetNodeById(nodeId);
 
 		try {
-			return await httpClient!.GetFromJsonAsync<WgShortPeerInfo[]>(this.GetPeersPathForNode(nodeInfo, withCleanup), this._defaultJsonOptions);
+			// await httpClient.GetFromJsonAsync<string[]>(this._nodesService.GetPeersPathForNode(nodeInfo, false));
+			return await httpClient!.GetFromJsonAsync<string[]?>(this.GetPeersPathForNode(nodeInfo, false), this._defaultJsonOptions);
+		} catch(HttpRequestException) {
+			return null;
+		}
+	}
+	public async Task<WgShortPeerInfo[]?> GetPeersFromWithCleanup(int nodeId)
+	{
+		var (nodeInfo, nodeStatus, httpClient) = GetNodeById(nodeId);
+
+		try {
+			// // await httpClient.GetFromJsonAsync<string[]>(this._nodesService.GetPeersPathForNode(nodeInfo, false));
+			return await httpClient!.GetFromJsonAsync<WgShortPeerInfo[]>(this.GetPeersPathForNode(nodeInfo, true), this._defaultJsonOptions);
 		} catch(HttpRequestException) {
 			return null;
 		}
@@ -180,17 +192,6 @@ public sealed class VpnNodesManipulator
 			this._logger.LogWarning($"Problem accessing the node \'{nodeInfo.Name}\': {ex.Message}. {ex.InnerException?.Message + '.' ?? string.Empty}");
 			return false;
 		}
-	}
-
-	#endregion
-
-	#region Private fields manipulation function
-	
-	public void SetNodeStatus(int nodeId, VpnNodeStatus status)
-	{
-		var (_, nodeStatus, _) = GetNodeById(nodeId);
-		nodeStatus.IsActive = status.IsActive;
-		nodeStatus.PeersCount = status.PeersCount;
 	}
 
 	#endregion

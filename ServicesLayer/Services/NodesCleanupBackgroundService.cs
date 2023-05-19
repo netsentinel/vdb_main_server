@@ -46,8 +46,12 @@ public sealed class NodesCleanupBackgroundService : BackgroundService
 		this._logger.LogInformation($"Total nodes to be in clean proccess: {this._manipulator.IdToNode.Count}.");
 
 		while(!stoppingToken.IsCancellationRequested) {
+			this._logger.LogInformation($"Starting nodes peers review...");
 			foreach(var val in this._manipulator.IdToNode.Values) {
-				await this._manipulator.GetPeersFromNode(val.nodeInfo.Id, withCleanup: true);
+				// remember! never let the ExecuteAsync to throw!
+				try {
+					await this._manipulator.GetPeersFromWithCleanup(val.nodeInfo.Id);
+				} catch { }
 			}
 
 			var delayMs = GetDelayFromNowMs();

@@ -14,33 +14,33 @@ namespace main_server_api.Controllers;
 [Produces("application/json")]
 public class ConnectionController : ControllerBase
 {
-	private readonly VpnContext _context;
-	private readonly VpnNodesManipulator _nodesService;
-	private readonly NodesPublicInfoService _statusService;
-	private readonly ILogger<ConnectionController> _logger;
-	public ConnectionController(
-		VpnContext context,
-		VpnNodesManipulator nodesService,
-		NodesPublicInfoService statusService,
-		ILogger<ConnectionController> logger)
-	{
-		this._context = context;
-		this._nodesService = nodesService;
-		this._statusService = statusService;
-		this._logger = logger;
-	}
+    private readonly VpnContext _context;
+    private readonly VpnNodesManipulator _nodesService;
+    private readonly NodesPublicInfoBackgroundService _statusService;
+    private readonly ILogger<ConnectionController> _logger;
+    public ConnectionController(
+        VpnContext context,
+        VpnNodesManipulator nodesService,
+        NodesPublicInfoBackgroundService statusService,
+        ILogger<ConnectionController> logger)
+    {
+        _context = context;
+        _nodesService = nodesService;
+        _statusService = statusService;
+        _logger = logger;
+    }
 
-	// This endpoint is HIGHLY recommended to be cached using reverse-proxy, i.e. NGINX
-	// i.e. proxy_cache any 1m; 
-	[HttpGet]
-	[AllowAnonymous]
-	[Route("nodes-list")]
-	public async Task<IActionResult> GetNodesList([FromServices] NodesPublicInfoService reporter)
-	{
-		return await Task.Run(() => this.Ok(reporter.GenerateReport()));
-	}
+    // This endpoint is HIGHLY recommended to be cached using reverse-proxy, i.e. NGINX
+    // i.e. proxy_cache any 1m; 
+    [HttpGet]
+    [AllowAnonymous]
+    [Route("nodes-list")]
+    public async Task<IActionResult> GetNodesList([FromServices] NodesPublicInfoBackgroundService reporter)
+    {
+        return await Task.Run(()=>Ok(reporter.LastReport));
+    }
 
-	/* TODO: Создать сервис отложенного отключения.
+    /* TODO: Создать сервис отложенного отключения.
 	 * Пусть этот сервис повторяет запрос на отключение от ноды с частатой,
 	 * зависящей от параметра pressure, вычисляемого на основании числа заявок
 	 * в очереди. Также что он должен дропать заявки, в случае переподлючения
@@ -76,62 +76,74 @@ public class ConnectionController : ControllerBase
 	 *	  зарегистрированы в базе данных как одна, а N равно суммарному числу нод 
 	 *	  в системе.   
 	 */
-	[HttpPut]
-	public async Task<IActionResult> ConnectToNode([FromBody][Required] ConnectDeviceRequest request)
-	{
-		var userId = this.ParseIdClaim();
+    [HttpPut]
+    public async Task<IActionResult> ConnectToNode([FromBody][Required] ConnectDeviceRequest request)
+    {
+        var userId = this.ParseIdClaim();
 
-		var foundDevice = this._context.Devices
-			.FirstOrDefault(x => 
-				x.WireguardPublicKey == request.WireguardPublicKey &&
-				x.UserId == this.ParseIdClaim());
+        var foundDevice = _context.Devices
+            .FirstOrDefault(x =>
+                x.WireguardPublicKey == request.WireguardPublicKey &&
+                x.UserId == this.ParseIdClaim());
 
-		if(foundDevice is null) {
-			// device does not exist for the user, reset it locally and relogin
-			return this.StatusCode(StatusCodes.Status406NotAcceptable);
-		}
+        if (foundDevice is null)
+        {
+            // device does not exist for the user, reset it locally and relogin
+            return StatusCode(StatusCodes.Status406NotAcceptable);
+        }
+    
+        _logger.LogInformation($"Found device with id={foundDevice.Id}. " +
+            $"Connecting it to node with id={request.NodeId}...");
 
-		this._logger.LogInformation($"Found device with id={foundDevice.Id}. " +
-			$"Connecting it to node with id={request.NodeId}...");
 
+        // ensure disconnected from prev node
+        if (foundDevice.LastConnectedNodeId is not null
+            && foundDevice.LastConnectedNodeId != request.NodeId)
+        {
+            _logger.LogInformation($"Sending disconnection request to the pevious connected " +
+                $"node with id={foundDevice.LastConnectedNodeId}...");
+            try
+            {
+                // not awaited, fire-and-forget
+                _ = _nodesService.RemovePeerFromNode(
+                     foundDevice.LastConnectedNodeId.Value, foundDevice.WireguardPublicKey);
+            }
+            catch { }
+        }
 
-		// ensure disconnected from prev node
-		if(foundDevice.LastConnectedNodeId is not null
-			&& foundDevice.LastConnectedNodeId != request.NodeId) {
-			this._logger.LogInformation($"Sending disconnection request to the pevious connected " +
-				$"node with id={foundDevice.LastConnectedNodeId}...");
-			try {
-				// not awaited, fire-and-forget
-				_ = this._nodesService.RemovePeerFromNode(
-					 foundDevice.LastConnectedNodeId.Value, foundDevice.WireguardPublicKey);
-			} catch { }
-		}
+        foundDevice.LastConnectedNodeId = request.NodeId;
+        try
+        {
+            _logger.LogInformation($"Sending CONNECTION request for device with ID={foundDevice.Id}" +
+                $"to node with ID={foundDevice.LastConnectedNodeId}...");
+            var addResult = await _nodesService.AddPeerToNode(request.NodeId, foundDevice.WireguardPublicKey);
+            if (addResult is not null && addResult.InterfacePublicKey is not null)
+            {
+                var node = _nodesService.IdToNode[request.NodeId].nodeInfo;
+                await _context.SaveChangesAsync();
+                return Ok(new ConnectDeviceResponse(addResult,
+                    request.WireguardPublicKey, node.IpAddress.ToString(), node.WireguardPort));
+            }
+            else
+            {
+                _logger.LogInformation($"Unable to add pubkey \'{request.WireguardPublicKey.Substring(0, 3)}...\' " +
+                $"to node {request.NodeId}.");
+                return Problem(Utf8Json.JsonSerializer.ToJsonString(addResult));
+            }
+        }
+        catch (Exception ex)
+        {
+            try
+            {
+                // not awaited, fire-and-forget
+                _ = _nodesService.RemovePeerFromNode( // LastConnectedNodeId is not null here!
+                    foundDevice.LastConnectedNodeId.Value, foundDevice.WireguardPublicKey);
+            }
+            catch { }
+            _logger.LogInformation($"Unable to add pubkey \'{request.WireguardPublicKey.Substring(0, 3)}...\' " +
+                $"to node {request.NodeId}: \'{ex.Message}\'.");
+        }
 
-		foundDevice.LastConnectedNodeId = request.NodeId;
-		try {
-			this._logger.LogInformation($"Sending CONNECTION request for device with ID={foundDevice.Id}" +
-				$"to node with ID={foundDevice.LastConnectedNodeId}...");
-			var addResult = await this._nodesService.AddPeerToNode(request.NodeId, foundDevice.WireguardPublicKey);
-			if(addResult is not null && addResult.InterfacePublicKey is not null) {
-				var node = this._nodesService.IdToNode[request.NodeId].nodeInfo;
-				await this._context.SaveChangesAsync();
-				return this.Ok(new ConnectDeviceResponse(addResult,
-					request.WireguardPublicKey, node.IpAddress.ToString(), node.WireguardPort));
-			} else {
-				this._logger.LogInformation($"Unable to add pubkey \'{request.WireguardPublicKey.Substring(0, 3)}...\' " +
-				$"to node {request.NodeId}.");
-				return this.Problem(Utf8Json.JsonSerializer.ToJsonString(addResult));
-			}
-		} catch(Exception ex) {
-			try {
-				// not awaited, fire-and-forget
-				_ = this._nodesService.RemovePeerFromNode( // LastConnectedNodeId is not null here!
-					foundDevice.LastConnectedNodeId.Value, foundDevice.WireguardPublicKey);
-			} catch { }
-			this._logger.LogInformation($"Unable to add pubkey \'{request.WireguardPublicKey.Substring(0, 3)}...\' " +
-				$"to node {request.NodeId}: \'{ex.Message}\'.");
-		}
-
-		return this.StatusCode(StatusCodes.Status500InternalServerError);
-	}
+        return StatusCode(StatusCodes.Status500InternalServerError);
+    }
 }

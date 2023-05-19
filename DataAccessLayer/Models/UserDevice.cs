@@ -23,24 +23,9 @@ public class UserDevice
 	private const int LengthOfBase64For512Bits = ((512 / 8) * 4 / 3) + 3;
 
 
-
-	public string GenerateDeviceName()
-	{
-		var bytes = Encoding.UTF8.GetBytes(this.WireguardPublicKey, 0, 4);
-		return (bytes[0] + bytes[1] + bytes[2] + bytes[3]).ToString("000");
-	}
-
 	public long Id { get; set; }
 	public int UserId { get; set; }
 	[MaxLength(LengthOfBase64For256Bits)] public string WireguardPublicKey { get; set; } = null!;
 	public int? LastConnectedNodeId { get; set; }
 	public DateTime? LastSeenUtc { get; set; }
-
-
-	/* Идея: добавить возможность вручную добавить WG-ключи
-	 * Проблема: ключ будет снесен автоочисткой, что не является
-	 * ожидаемым поведением для данного такого ключа.
-	 * 
-	 * public bool IsAddedManually { get; set; } = false; 
-	 */
 }

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption.ConfigurationM
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using ServicesLayer.Services;
+using main_server_api.Middleware;
 
 
 #if DEBUG
@@ -58,16 +59,20 @@ internal class Program
 		});
 
 		if(builder.Environment.IsDevelopment()) {
-			builder.Services.AddSwaggerGen();
+			//builder.Services.AddSwaggerGen();
 		}
 
 		//builder.Services.AddSingleton<EnvironmentProvider>(); // we are not really into env vars in this app...
 		builder.Services.AddSingleton<SettingsProviderService>();
+		builder.Services.AddSingleton<StatisticsService>();
 		builder.Services.AddSingleton<JwtService>();
 		builder.Services.AddSingleton<VpnNodesManipulator>();
-		builder.Services.AddSingleton<NodesPublicInfoService>();
+		builder.Services.AddSingleton<NodesPublicInfoBackgroundService>();
+		builder.Services.AddHostedService(pr => pr.GetRequiredService<NodesPublicInfoBackgroundService>());
 		builder.Services.AddSingleton<NodesCleanupBackgroundService>();
 		builder.Services.AddHostedService(pr => pr.GetRequiredService<NodesCleanupBackgroundService>());
+
+		builder.Services.AddScoped<StatisticsMiddleware>();
 
 		builder.Services.AddDbContext<VpnContext>(opts => {
 			opts.UseNpgsql(builder.Environment.IsDevelopment()
@@ -86,14 +91,16 @@ internal class Program
 		});
 
 		if(app.Environment.IsDevelopment()) {
-			app.UseSwagger();
-			app.UseSwaggerUI();
+			//app.UseSwagger();
+			//app.UseSwaggerUI();
 		}
 
 		app.UseAuthentication();
 		app.UseRouting();
 		app.UseAuthorization();
 		app.MapControllers();
+
+		app.UseMiddleware<StatisticsMiddleware>();
 
 		app.Services.CreateScope().ServiceProvider.GetRequiredService<VpnContext>().Database.Migrate();
 		app.Run();
