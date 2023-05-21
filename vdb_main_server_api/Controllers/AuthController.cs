@@ -25,13 +25,15 @@ public sealed class AuthController : ControllerBase
 
     private readonly VpnContext _context;
     private readonly JwtService _jwtService;
+    private readonly RegistrationLimiterService _regLimiter;
     private readonly ILogger<AuthController> _logger;
     private static CookieOptions? _jwtCookieOptions;
 
-    public AuthController(VpnContext context, JwtService jwtService, ILogger<AuthController> logger)
+    public AuthController(VpnContext context, JwtService jwtService, RegistrationLimiterService regLimiter, ILogger<AuthController> logger)
     {
         _context = context;
         _jwtService = jwtService;
+        _regLimiter = regLimiter;
         _logger = logger;
     }
 
@@ -246,6 +248,10 @@ public sealed class AuthController : ControllerBase
             { // or tell him to fuck off?
                 return Conflict(nameof(request.Email));
             }
+        }
+
+        if(!_regLimiter.CountAndAllow()) {
+            return StatusCode(StatusCodes.Status503ServiceUnavailable);
         }
 
         // create password hash

@@ -21,4 +21,9 @@
     </PackageReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\ServicesLayer\ServicesLayer.csproj" />
+    <ProjectReference Include="..\vdb_main_server_api\main_server_api.csproj" />
+  </ItemGroup>
+
 </Project>

@@ -71,6 +71,11 @@ internal class Program
 		builder.Services.AddHostedService(pr => pr.GetRequiredService<NodesPublicInfoBackgroundService>());
 		builder.Services.AddSingleton<NodesCleanupBackgroundService>();
 		builder.Services.AddHostedService(pr => pr.GetRequiredService<NodesCleanupBackgroundService>());
+		builder.Services.AddSingleton<RegistrationLimiterService>(pr => new(
+			pr.GetRequiredService<SettingsProviderService>().RegistrationLimiterServiceSettings,
+			pr.GetRequiredService<ILogger<RegistrationLimiterService>>())
+		);
+		builder.Services.AddHostedService(pr => pr.GetRequiredService<RegistrationLimiterService>());
 
 		builder.Services.AddScoped<StatisticsMiddleware>();
 

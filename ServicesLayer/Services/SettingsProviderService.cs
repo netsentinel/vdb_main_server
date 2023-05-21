@@ -43,6 +43,10 @@ public class SettingsProviderService
 		this._configuration.GetSection(nameof(this.VpnNodesStatusServiceSettings))
 		.Get<VpnNodesStatusServiceSettings>() ?? new();
 
+	public virtual RegistrationLimiterServiceSettings RegistrationLimiterServiceSettings =>
+		this._configuration.GetSection(nameof(this.RegistrationLimiterServiceSettings))
+		.Get<RegistrationLimiterServiceSettings>() ?? new();
+
 	public SettingsProviderService(IConfiguration configuration)
 	{
 		this._configuration = configuration;
