@@ -73,19 +73,19 @@ public sealed class JwtService
 	{
 		return this.GenerateJwtToken(new Claim[]
 		{
-			new Claim(nameof(user.Id),user.Id.ToString()),
-			new Claim(nameof(user.IsAdmin), user.IsAdmin.ToString()),
-			new Claim(nameof(user.Email), user.Email),
-			new Claim(nameof(user.IsEmailConfirmed),user.IsEmailConfirmed.ToString()),
-			new Claim(nameof(user.PayedUntilUtc), user.PayedUntilUtc.ToString("o")) // 'o' format provider satisfies ISO 8601
+			new Claim(nameof(user.Id),user.Id.ToString(),ClaimValueTypes.Integer32),
+			new Claim(nameof(user.IsAdmin), user.IsAdmin.ToString(), ClaimValueTypes.Boolean),
+			new Claim(nameof(user.Email), user.Email,ClaimValueTypes.String),
+			new Claim(nameof(user.IsEmailConfirmed),user.IsEmailConfirmed.ToString(), ClaimValueTypes.Boolean),
+			new Claim(nameof(user.PayedUntilUtc), user.PayedUntilUtc.ToString("o"), ClaimValueTypes.String) // 'o' format provider satisfies ISO 8601
 		});
 	}
 
 	public string GenerateRefreshJwtToken(RefreshToken token)
 	{
 		return this.GenerateJwtToken(new[] {
-			new Claim(nameof(token.IssuedToUser), token.IssuedToUser.ToString()),
-			new Claim(nameof(token.Entropy),token.Entropy.ToString()),
+			new Claim(nameof(token.IssuedToUser), token.IssuedToUser.ToString(),ClaimValueTypes.Integer32),
+			new Claim(nameof(token.Entropy),token.Entropy.ToString(),ClaimValueTypes.Integer64),
 			}, this.RefreshTokenLifespan);
 	}
 	#endregion
