@@ -4,13 +4,14 @@ using main_server_api.Models.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Net.Http.Headers;
 using ServicesLayer.Models.Common;
+using ServicesLayer.Models.Runtime;
 using ServicesLayer.Services;
 using ServicesLayer.Services.Static;
 using System.ComponentModel.DataAnnotations;
-using System.Net.Sockets;
 using System.Security.Claims;
-using System.Security.Cryptography.X509Certificates;
+using SameSiteMode = Microsoft.AspNetCore.Http.SameSiteMode;
 
 namespace main_server_api.Controllers;
 
@@ -25,13 +26,15 @@ public sealed class AuthController : ControllerBase
 
 	private readonly VpnContext _context;
 	private readonly JwtService _jwtService;
+	private readonly RegistrationLimiterService _regLimiter;
 	private readonly ILogger<AuthController> _logger;
 	private static CookieOptions? _jwtCookieOptions;
 
-	public AuthController(VpnContext context, JwtService jwtService, ILogger<AuthController> logger)
+	public AuthController(VpnContext context, JwtService jwtService, RegistrationLimiterService regLimiter, ILogger<AuthController> logger)
 	{
 		this._context = context;
 		this._jwtService = jwtService;
+		this._regLimiter = regLimiter;
 		this._logger = logger;
 	}
 
@@ -39,6 +42,8 @@ public sealed class AuthController : ControllerBase
 	// Метод возвращает OkResult, сигнализируя, что авторизация пользователя возможна.
 	[HttpGet]
 	public IActionResult Validate() => this.Ok();
+
+
 
 	[HttpGet]
 	[Route("sessions")]
@@ -49,7 +54,6 @@ public sealed class AuthController : ControllerBase
 
 		return this.Ok(new SessionsResponse() { TotalCount = count });
 	}
-
 
 	/* Метод служит для генерации access & refresh JWT.
 	 * Access генерируется в любом случае.
@@ -98,8 +102,8 @@ public sealed class AuthController : ControllerBase
 				) {
 				_jwtCookieOptions = new CookieOptions() {
 #if RELEASE
-					Secure = true,
-					SameSite = SameSiteMode.Strict,
+                    Secure = true,
+                    SameSite = SameSiteMode.Strict,
 #else
 					Secure = false,
 					SameSite = SameSiteMode.Lax,
@@ -196,13 +200,24 @@ public sealed class AuthController : ControllerBase
 			return this.Unauthorized(nameof(request.Password));
 		}
 
-		var jwt = this.IssueJwtAndAddToUser(found, provideRefresh, refreshJwtInBody);
+		return await this.OkJwt(found, provideRefresh, refreshJwtInBody);
+	}
+
+	[NonAction]
+	public async Task<OkObjectResult> OkJwt(
+	User user,
+	bool provideRefresh = true,
+	bool refreshJwtInBody = false)
+	{
+		var jwt = this.IssueJwtAndAddToUser(user, provideRefresh, refreshJwtInBody);
 		if(provideRefresh) {
 			await this._context.SaveChangesAsync();
 		}
 
 		return this.Ok(jwt);
 	}
+
+
 
 	/* Метод регистрирует пользователя.
 	 * По дефолту включено перенаправление на Login,
@@ -224,6 +239,10 @@ public sealed class AuthController : ControllerBase
 			} else { // or tell him to fuck off?
 				return this.Conflict(nameof(request.Email));
 			}
+		}
+
+		if(!this._regLimiter.CountAndAllow()) {
+			return this.StatusCode(StatusCodes.Status503ServiceUnavailable);
 		}
 
 		// create password hash
@@ -329,7 +348,7 @@ public sealed class AuthController : ControllerBase
 		var refreshJwt = this.Request.Cookies[JwtRefreshTokenCookieName];
 
 		if(refreshJwt is not null && !string.IsNullOrWhiteSpace(token)) {
-			return BadRequest(ErrorMessages.RefreshJwtIsExpectedInCookiesXorRoute);
+			return this.BadRequest(ErrorMessages.RefreshJwtIsExpectedInCookiesXorRoute);
 		} else
 		if(refreshJwt is null) {
 			refreshJwt = token;
@@ -353,14 +372,12 @@ public sealed class AuthController : ControllerBase
 	[Route("password")]
 	public async Task<IActionResult> ChangePassword([FromBody][Required] ChangePasswordRequest request)
 	{
-		var user = await this._context.Users.FirstOrDefaultAsync();
+		var user = await this._context.Users.FirstOrDefaultAsync(x => x.Id == this.ParseIdClaim());
 		if(user is null) {
 			return this.NotFound();
 		}
 
-		var passHash = PasswordsService.HashPassword(request.Password, out var passSalt);
-		user.PasswordSalt = passSalt;
-		user.PasswordHash = passHash;
+		SetPasswordAsync(user, request);
 
 		try {
 			await this._context.SaveChangesAsync();
@@ -369,4 +386,116 @@ public sealed class AuthController : ControllerBase
 			return this.Problem();
 		}
 	}
+
+	[NonAction]
+	private void SetPasswordAsync(User dbEntry, ChangePasswordRequest request)
+	{
+		var passHash = PasswordsService.HashPassword(request.Password, out var passSalt);
+		dbEntry.PasswordSalt = passSalt;
+		dbEntry.PasswordHash = passHash;
+	}
+
+
+
+	#region recovery
+	private const string isRecoveryJwtClaim = nameof(isRecoveryJwtClaim);
+	private const string emailJwtClaim = nameof(emailJwtClaim);
+	private const string entropyClaim = nameof(entropyClaim);
+
+	[HttpPut]
+	[AllowAnonymous]
+	[Route("recovery/{email}")]
+	public async Task<IActionResult> CreateAndSendLink(
+		[FromServices] SettingsProviderService settings,
+		[FromServices] EmailSendingService sender,
+		[FromRoute][Required][EmailAddress] string email)
+	{
+		var found = await this._context.Users.FirstOrDefaultAsync(x => x.Email == email);
+		if(found is null) return this.NotFound();
+
+
+		var metaValues = settings.MetaValues;
+		var minDelay = TimeSpan.FromSeconds(settings.UserEmailLimitations.MinimalDelayBetweenMailsSenconds);
+#if RELEASE
+		if((DateTime.UtcNow - found.LastSendedEmail) < minDelay) {
+			this.Response.Headers.Add(HeaderNames.RetryAfter,
+				(minDelay - (DateTime.UtcNow - found.LastSendedEmail)).TotalSeconds.ToString());
+			return this.StatusCode(503);
+		}
+#endif
+
+		var entropy = DateTime.UtcNow.Ticks;
+		var jwt = this._jwtService.GenerateJwtToken(new Claim[] {
+			new(entropyClaim,entropy.ToString(),ClaimValueTypes.Integer64),
+			new(isRecoveryJwtClaim,true.ToString(),ClaimValueTypes.Boolean),
+			new(emailJwtClaim,email,ClaimValueTypes.String)
+		}, minDelay * 16);
+
+#if RELEASE
+		var result = (int)(await sender.Send(new() {
+			Subject = "Account recovery",
+			Body = "Hello. Here is your link. Use it to login, then change your password. If you did not request a password reset, please ignore this message.\r\n" + metaValues.PasswordRecoveryBase + jwt,
+			From = metaValues.ProjectEmailNoReply,
+			FromName = metaValues.ProjectName,
+			To = found.Email,
+		}));
+#endif
+
+#if RELEASE
+		if(200 <= result && result <= 299) {
+#endif
+		found.RecoveryJwtEntropy = entropy;
+		found.LastSendedEmail = DateTime.UtcNow;
+		await this._context.SaveChangesAsync();
+		return this.Ok();
+#if RELEASE
+		} else {
+			this.Response.Headers.Add(HeaderNames.RetryAfter, (minDelay.TotalSeconds + 60).ToString());
+			return this.StatusCode(503);
+		}
+#endif
+	}
+
+	[HttpPost]
+	[AllowAnonymous]
+	[Route("recovery/{jwt}")]
+	public async Task<IActionResult> ResetPassword([FromRoute][Required] string jwt, [FromBody][Required] ChangePasswordRequest request)
+	{
+		_logger.LogInformation("Begin password reset.");
+
+		if(string.IsNullOrEmpty(jwt)) // does this fuck even give us what we need
+			return this.BadRequest();
+
+		var cls = this._jwtService.ValidateJwtToken(jwt); // ok, decode
+
+		if(!bool.Parse(cls.FindFirstValue(isRecoveryJwtClaim)!)) // em... dont ask
+			return this.BadRequest();
+
+		var email = cls.FindFirstValue(emailJwtClaim); // and this should also never happen
+		if(email is null)
+			return BadRequest();
+
+		var found = await this._context.Users.FirstOrDefaultAsync(x => x.Email == email);
+		if(found is null) // user in the bag?
+			return this.NotFound();
+
+		var entropy = long.Parse(cls.FindFirstValue(entropyClaim)!); // ok, here we go
+		if(entropy != found.RecoveryJwtEntropy)
+			return this.Forbid();
+
+		_logger.LogInformation($"JWT valid and user found in the database: \'{found.Email}\'.");
+
+		found.RecoveryJwtEntropy = 0;
+		SetPasswordAsync(found, request);
+
+		try {
+			await this._context.SaveChangesAsync();
+			_logger.LogInformation($"Password reset successfully.");
+			return this.Ok();
+		} catch {
+			_logger.LogInformation($"Problem saving new password to the db.");
+			return this.Problem();
+		}
+	}
+#endregion
 }

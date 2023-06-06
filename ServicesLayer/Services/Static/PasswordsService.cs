@@ -8,12 +8,6 @@ public static class PasswordsService
 {
 	private const int SaltSizeBytes = 512 / 8;
 
-	//public PasswordsService(IServiceScopeFactory DbContextScopeFactory, PasswordsCryptographyServiceSettingsProvider SettingsProvider)
-	//{
-	//	this.DbContextScopeFactory = DbContextScopeFactory;
-	//	this.SettingsProvider = SettingsProvider;
-	//}
-
 	private static byte[] ConcatBytes(byte[] firstSeq, byte[] secondSeq)
 	{
 		var result = new byte[firstSeq.Length + secondSeq.Length];
@@ -30,6 +24,7 @@ public static class PasswordsService
 	{
 		return SHA512.HashData(ConcatBytes(Encoding.UTF8.GetBytes(passwordPlainText), salt));
 	}
+
 
 	public static byte[] HashPassword(string passwordPlainText, out byte[] generatedSalt)
 	{

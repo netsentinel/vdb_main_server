@@ -1,9 +1,11 @@
 using DataAccessLayer.Contexts;
+using main_server_api.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption;
 using Microsoft.AspNetCore.DataProtection.AuthenticatedEncryption.ConfigurationModel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using ServicesLayer.Services;
 
@@ -43,7 +45,6 @@ internal class Program
 			opts.RequireHttpsMetadata = false;
 			opts.SaveToken = false;
 
-			var env = new EnvironmentProvider(null);
 			opts.TokenValidationParameters = new TokenValidationParameters {
 				ValidateIssuerSigningKey = true,
 				/* echo "{\"GeneratedSigningKey\":{\"SigningKeyBase64\":
@@ -59,16 +60,28 @@ internal class Program
 		});
 
 		if(builder.Environment.IsDevelopment()) {
-			builder.Services.AddSwaggerGen();
+			//builder.Services.AddSwaggerGen();
 		}
 
-		builder.Services.AddSingleton<EnvironmentProvider>();
+		//builder.Services.AddSingleton<EnvironmentProvider>(); // we are not really into env vars in this app...
 		builder.Services.AddSingleton<SettingsProviderService>();
+		builder.Services.AddSingleton<EmailSendingService>(pr=> new(
+			pr.GetRequiredService<SettingsProviderService>().EmailSendingServiceSettings,
+			pr.GetRequiredService<ILogger<EmailSendingService>>()));
+		builder.Services.AddSingleton<StatisticsService>();
 		builder.Services.AddSingleton<JwtService>();
-		builder.Services.AddSingleton<VpnNodesService>();
-		builder.Services.AddHostedService(pr => pr.GetRequiredService<VpnNodesService>());
-		builder.Services.AddSingleton<VpnNodesStatusService>();
-		builder.Services.AddHostedService(pr => pr.GetRequiredService<VpnNodesStatusService>());
+		builder.Services.AddSingleton<VpnNodesManipulator>();
+		builder.Services.AddSingleton<NodesPublicInfoBackgroundService>();
+		builder.Services.AddHostedService(pr => pr.GetRequiredService<NodesPublicInfoBackgroundService>());
+		builder.Services.AddSingleton<NodesCleanupBackgroundService>();
+		builder.Services.AddHostedService(pr => pr.GetRequiredService<NodesCleanupBackgroundService>());
+		builder.Services.AddSingleton<RegistrationLimiterService>(pr => new(
+			pr.GetRequiredService<SettingsProviderService>().RegistrationLimiterServiceSettings,
+			pr.GetRequiredService<ILogger<RegistrationLimiterService>>())
+		);
+		builder.Services.AddHostedService(pr => pr.GetRequiredService<RegistrationLimiterService>());
+
+		builder.Services.AddScoped<StatisticsMiddleware>();
 
 		builder.Services.AddDbContext<VpnContext>(opts => {
 			opts.UseNpgsql(builder.Environment.IsDevelopment()
@@ -87,14 +100,16 @@ internal class Program
 		});
 
 		if(app.Environment.IsDevelopment()) {
-			app.UseSwagger();
-			app.UseSwaggerUI();
+			//app.UseSwagger();
+			//app.UseSwaggerUI();
 		}
 
 		app.UseAuthentication();
 		app.UseRouting();
 		app.UseAuthorization();
 		app.MapControllers();
+
+		app.UseMiddleware<StatisticsMiddleware>();
 
 		app.Services.CreateScope().ServiceProvider.GetRequiredService<VpnContext>().Database.Migrate();
 		app.Run();

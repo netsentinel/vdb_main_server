@@ -38,7 +38,7 @@ public class User
 		if(this.IsAdmin) return AccessLevels.Admin;
 		if(this.PayedUntil > DateTime.UtcNow) return AccessLevels.Payed;
 		if(this.IsEmailConfirmed) return AccessLevels.Free;
-			
+
 		return AccessLevels.Unconfirmed;
 	}
 
@@ -50,6 +50,8 @@ public class User
 	[MaxLength(512 / 8)] public byte[] PasswordSalt { get; set; } = null!;
 	[MaxLength(512 / 8)] public byte[] PasswordHash { get; set; } = null!;
 	[DefaultValue(0)] public DateTime PayedUntil { get; set; } = DateTime.MinValue;
+	[DefaultValue(0)] public DateTime LastSendedEmail { get; set; } = DateTime.MinValue;
+	[DefaultValue(0)] public long RecoveryJwtEntropy { get; set; } = 0;
 	#endregion
 
 	public List<long> RefreshTokensEntropies { get; set; } = null!;

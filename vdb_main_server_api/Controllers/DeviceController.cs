@@ -27,19 +27,18 @@ namespace main_server_api.Controllers;
 public class DeviceController : ControllerBase
 {
 	private readonly VpnContext _context;
-	private readonly VpnNodesService _nodesService;
+	private readonly VpnNodesManipulator _nodesService;
 	private readonly DeviceControllerSettings _settings;
 	private readonly Dictionary<int, int> _accessLevelToDevicesLimit;
-	private static readonly CookieOptions? _jwtCookieOptions;
 
 
-	public DeviceController(VpnContext context, VpnNodesService nodesService, SettingsProviderService settingsProvider)
+	public DeviceController(VpnContext context, VpnNodesManipulator nodesService, SettingsProviderService settingsProvider)
 	{
 		this._context = context;
 		this._nodesService = nodesService;
 		this._settings = settingsProvider.DeviceControllerSettings;
 		this._accessLevelToDevicesLimit = this._settings.AccessLevelToMaxDevices?
-			.ToDictionary(x => x.AccessLevel, x => x.DevicesLimit * _settings.DevicesLimitMultiplier)
+			.ToDictionary(x => x.AccessLevel, x => x.DevicesLimit * this._settings.DevicesLimitMultiplier)
 			?? new Dictionary<int, int>();
 	}
 
@@ -54,7 +53,7 @@ public class DeviceController : ControllerBase
 #if DEBUG
 		return result * 5;
 #else
-		return result;
+        return result;
 #endif
 	}
 
@@ -63,10 +62,10 @@ public class DeviceController : ControllerBase
 	[Route("user-devices-limits")]
 	public async Task<IActionResult> GetDevicesLimits()
 	{
-		return await Task.Run(() => Ok(this._settings.AccessLevelToMaxDevices?
+		return await Task.Run(() => this.Ok(this._settings.AccessLevelToMaxDevices?
 			.Select(x => new AccessLevelToDevicesLimit() {
 				AccessLevel = x.AccessLevel,
-				DevicesLimit = x.DevicesLimit * _settings.DevicesLimitMultiplier
+				DevicesLimit = x.DevicesLimit * this._settings.DevicesLimitMultiplier
 			})));
 	}
 
@@ -88,11 +87,11 @@ public class DeviceController : ControllerBase
 		if(found is not null) {
 
 			return this.Problem(ErrorMessages.WireguardPublicKeyAlreadyExists, statusCode:
-				(allowDuplicate && found.UserId == this.ParseIdClaim())
+				allowDuplicate && found.UserId == this.ParseIdClaim()
 				? StatusCodes.Status302Found
 				: StatusCodes.Status303SeeOther);
 		}
-		 
+
 		var userId = this.ParseIdClaim();
 		var userAccessLevel = (await this._context.Users.AsNoTracking()
 			.FirstOrDefaultAsync(x => x.Id == userId))?.GetAccessLevel();
@@ -138,7 +137,7 @@ public class DeviceController : ControllerBase
 		if(toDelete.LastConnectedNodeId is not null) {
 			// not awaited, fire-and-forget
 			_ = this._nodesService.RemovePeerFromNode(
-				toDelete.WireguardPublicKey, toDelete.LastConnectedNodeId.Value);
+				toDelete.LastConnectedNodeId.Value, toDelete.WireguardPublicKey);
 		}
 
 		this._context.Remove(toDelete);

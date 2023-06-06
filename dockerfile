@@ -20,13 +20,11 @@ RUN mkdir -p /data/nginx/cache
 
 COPY --from=build /app/publish /app
 COPY ./build_alpine/pre-setup.sh ./etc/rest2wg/pre-setup.sh
-COPY ./build_alpine/pre-nginx-limit_req.conf.template ./etc/rest2wg/pre-nginx-limit_req.conf.template
 COPY ./build_alpine/pre-nginx.conf/ ./etc/nginx/nginx.conf
 COPY ./build_alpine/pre-nginx-ssl-params.conf ./etc/nginx/snippets/ssl-params.conf
 COPY ./build_alpine/pre-nginx-self-signed.conf ./etc/nginx/snippets/self-signed.conf
 
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV VDB_GENERATE_JWT_SIG=true
-ENV VDB_LIMIT_REQ=100000
 ENV VDB_ALLOWED_IP='all'
 CMD ["bash", "-c", "umask 077 && chmod +x /etc/rest2wg/pre-setup.sh && /etc/rest2wg/pre-setup.sh"]

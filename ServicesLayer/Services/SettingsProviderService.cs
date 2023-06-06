@@ -10,7 +10,6 @@ namespace ServicesLayer.Services;
 public class SettingsProviderService
 {
 	protected readonly IConfiguration _configuration;
-	protected readonly EnvironmentProvider _environment;
 
 	public virtual IEnumerable<VpnNodeInfo> VpnNodeInfos =>
 		this._configuration.GetSection(nameof(this.VpnNodeInfos)).Get<VpnNodeInfoNotParsed[]>()?
@@ -40,14 +39,29 @@ public class SettingsProviderService
 		this._configuration.GetSection(nameof(this.DeviceControllerSettings))
 		.Get<DeviceControllerSettings>() ?? new();
 
-	public VpnNodesStatusServiceSettings VpnNodesStatusServiceSettings =>
+	public virtual VpnNodesStatusServiceSettings VpnNodesStatusServiceSettings =>
 		this._configuration.GetSection(nameof(this.VpnNodesStatusServiceSettings))
 		.Get<VpnNodesStatusServiceSettings>() ?? new();
 
-	public SettingsProviderService(IConfiguration configuration, EnvironmentProvider environmentProvider)
+	public virtual RegistrationLimiterServiceSettings RegistrationLimiterServiceSettings =>
+		this._configuration.GetSection(nameof(this.RegistrationLimiterServiceSettings))
+		.Get<RegistrationLimiterServiceSettings>() ?? new();
+
+	public virtual UserEmailLimitations UserEmailLimitations =>
+		this._configuration.GetSection(nameof(this.UserEmailLimitations))
+		.Get<UserEmailLimitations>() ?? new();
+
+	public virtual MetaValues MetaValues =>
+		this._configuration.GetSection(nameof(this.MetaValues))
+		.Get<MetaValues>() ?? new();
+
+	public virtual EmailSendingServiceSettings EmailSendingServiceSettings
+		=> this._configuration.GetSection(nameof(this.EmailSendingServiceSettings))
+		.Get<EmailSendingServiceSettings>() ?? new();
+
+	public SettingsProviderService(IConfiguration configuration)
 	{
 		this._configuration = configuration;
-		this._environment = environmentProvider;
 	}
 }
 
