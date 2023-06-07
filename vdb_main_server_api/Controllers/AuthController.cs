@@ -377,7 +377,7 @@ public sealed class AuthController : ControllerBase
 			return this.NotFound();
 		}
 
-		SetPasswordAsync(user, request);
+		SetPassword(user, request);
 
 		try {
 			await this._context.SaveChangesAsync();
@@ -388,7 +388,7 @@ public sealed class AuthController : ControllerBase
 	}
 
 	[NonAction]
-	private void SetPasswordAsync(User dbEntry, ChangePasswordRequest request)
+	private void SetPassword(User dbEntry, ChangePasswordRequest request)
 	{
 		var passHash = PasswordsService.HashPassword(request.Password, out var passSalt);
 		dbEntry.PasswordSalt = passSalt;
@@ -486,7 +486,7 @@ public sealed class AuthController : ControllerBase
 		_logger.LogInformation($"JWT valid and user found in the database: \'{found.Email}\'.");
 
 		found.RecoveryJwtEntropy = 0;
-		SetPasswordAsync(found, request);
+		SetPassword(found, request);
 
 		try {
 			await this._context.SaveChangesAsync();

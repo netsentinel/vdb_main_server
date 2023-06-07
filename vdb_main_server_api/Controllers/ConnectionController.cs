@@ -108,6 +108,7 @@ public class ConnectionController : ControllerBase
 		}
 
 		foundDevice.LastConnectedNodeId = request.NodeId;
+		foundDevice.LastSeenUtc = DateTime.UtcNow;
 		try {
 			this._logger.LogInformation($"Sending CONNECTION request for device with ID={foundDevice.Id}" +
 				$"to node with ID={foundDevice.LastConnectedNodeId}...");
