@@ -10,9 +10,12 @@
 ## Full list of endpoints:
 - ### AUTH
     - **GET /api/auth** - always returns 200_OK if user is authorized.
+    - **GET /api/auth/sessions** - returns count of other sessions.
     - **POST /api/auth[?provideRefresh=true][?refreshJwtInBody=false]** - authenticates the user using [LoginRequest](https://github.com/LuminoDiode/vdb_main_server/blob/master/vdb_main_server_api/Models//Auth/LoginRequest.cs) credentials.
+    - **POST /api/auth/recovery/{jwt}** - changes password using specified model.
     - **PUT /api/auth[?provideRefresh=true][?refreshJwtInBody=false][?redirectToLogin=false]** - creates [or authenticates (if redirectToLogin is set to true)] the user using [RegistrationRequest](https://github.com/LuminoDiode/vdb_main_server/blob/master/vdb_main_server_api/Models/Auth/RegistrationRequest.cs) credentials.
-    - **PATCH /api/auth** - refreshes tokens using refresh JWT from cookie XOR [RefreshJwtRequest](https://github.com/LuminoDiode/vdb_main_server/blob/master/vdb_main_server_api/Models/Auth/RefreshJwtRequest.cs) from body. If token is passed both in cookie and body, 400_BadRequest is returned.
+    - **PUT /api/auth/recovery/{email}** - sends email with link for password recovery.
+    - **PATCH /api/auth/** - refreshes tokens using refresh JWT from cookie XOR [RefreshJwtRequest](https://github.com/LuminoDiode/vdb_main_server/blob/master/vdb_main_server_api/Models/Auth/RefreshJwtRequest.cs) from body. If token is passed both in cookie and body, 400_BadRequest is returned.
     - **PATCH /api/auth/refresh** - do the same as above.
     - **PATCH /api/auth/password** - changes the password using [ChangePasswordRequest](https://github.com/LuminoDiode/vdb_main_server/blob/master/vdb_main_server_api/Models/Auth/ChangePasswordRequest.cs) from body;
     - **DELETE /api/auth** - terminates all other refresh JWTs. Token must be passed in cookies.
