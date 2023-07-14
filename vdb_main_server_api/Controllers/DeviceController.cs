@@ -109,7 +109,7 @@ public class DeviceController : ControllerBase
 			UserId = userId,
 			WireguardPublicKey = request.WireguardPublicKey,
 			LastConnectedNodeId = null,
-			LastSeenUtc = DateTime.UtcNow
+			LastSeenUtc = null
 		});
 
 		await this._context.SaveChangesAsync();

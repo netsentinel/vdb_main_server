@@ -2,6 +2,7 @@
 using main_server_api.Models.Device;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using ServicesLayer.Services;
 using System.ComponentModel.DataAnnotations;
 
@@ -81,7 +82,7 @@ public class ConnectionController : ControllerBase
 	{
 		var userId = this.ParseIdClaim();
 
-		var foundDevice = this._context.Devices
+		var foundDevice = this._context.Devices.AsTracking()
 			.FirstOrDefault(x =>
 				x.WireguardPublicKey == request.WireguardPublicKey &&
 				x.UserId == this.ParseIdClaim());
