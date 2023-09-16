@@ -83,6 +83,12 @@ internal class Program
 
 		builder.Services.AddScoped<StatisticsMiddleware>();
 
+		builder.Services.AddSingleton<SessionTerminatorService>(pr => new(
+			pr.GetRequiredService<SettingsProviderService>().JwtServiceSettings.AccessTokenLifespanSeconds,
+			pr.GetRequiredService<ILogger<SessionTerminatorService>>())
+		);
+		builder.Services.AddScoped<SessionTerminatorMiddleware>();
+
 		builder.Services.AddDbContext<VpnContext>(opts => {
 			opts.UseNpgsql(builder.Environment.IsDevelopment()
 				? builder.Configuration["ConnectionStrings:LocalhostConnection"]
@@ -110,6 +116,7 @@ internal class Program
 		app.MapControllers();
 
 		app.UseMiddleware<StatisticsMiddleware>();
+		app.UseMiddleware<SessionTerminatorMiddleware>();
 
 		app.Services.CreateScope().ServiceProvider.GetRequiredService<VpnContext>().Database.Migrate();
 		app.Run();
