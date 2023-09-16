@@ -320,7 +320,7 @@ public sealed class AuthController : ControllerBase
 	[HttpDelete]
 	[Route("")]
 	[Route("other-sessions")]
-	public async Task<IActionResult> DeleteAllOtherDevices()
+	public async Task<IActionResult> DeleteAllOtherDevices([FromServices] SessionTerminatorService sts)
 	{
 		var refreshJwt = this.Request.Cookies[JwtRefreshTokenCookieName];
 
@@ -334,6 +334,7 @@ public sealed class AuthController : ControllerBase
 		}
 
 		// foundUser is guaranteed to be not null IF errorResult is null
+		sts.SetUserMinimalJwtIat(foundUserAsTracking!.Id, DateTime.UtcNow.AddSeconds(-1));
 		foundUserAsTracking!.RefreshTokensEntropies = new(1);
 		var newToken = this.IssueJwtAndAddToUser(foundUserAsTracking!);
 		await this._context.SaveChangesAsync();
