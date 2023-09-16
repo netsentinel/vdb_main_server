@@ -25,6 +25,7 @@ public class SessionTerminatorService
 	private Dictionary<int, DateTime> _userIdToMinimalAccessJwtIat;
 	private int _accessLifeTimeSeconds;
 	private int _addedSinceLastClean;
+	private DateTime _lastCleanPerformed;
 
 	private ILogger<SessionTerminatorService> _logger;
 
@@ -33,6 +34,7 @@ public class SessionTerminatorService
 		_userIdToMinimalAccessJwtIat = new();
 		_accessLifeTimeSeconds = accessLifeTimeSeconds;
 		_addedSinceLastClean = 0;
+		_lastCleanPerformed = DateTime.UtcNow;
 		_cleanInProgress = false;
 
 		_logger = logger;
@@ -55,6 +57,9 @@ public class SessionTerminatorService
 				.Where(x => (DateTime.UtcNow - x.Value).TotalSeconds < _accessLifeTimeSeconds)
 				.ToDictionary(x => x.Key, x => x.Value);
 
+			_addedSinceLastClean = 0;
+			_lastCleanPerformed = DateTime.UtcNow;
+
 			_logger.LogInformation($"Cleanup completed, took {(DateTime.UtcNow - started).TotalMilliseconds.ToString("0.0")} ms.");
 		}
 		finally
@@ -71,19 +76,18 @@ public class SessionTerminatorService
 		}
 		else
 		{
-			_userIdToMinimalAccessJwtIat.Add(usedId, currMinIat);
+			_userIdToMinimalAccessJwtIat.Add(usedId, minimalIat);
 			_addedSinceLastClean++;
 
+#if DEBUG
+			if(_addedSinceLastClean > 16384) { int a = 5; }
+#endif
+
 			// 16384 elements will consume not more than 5 MB here
-			if(_addedSinceLastClean > 16384) CleanOutdated();
+			if((DateTime.UtcNow - _lastCleanPerformed).TotalSeconds > _accessLifeTimeSeconds
+				&& _addedSinceLastClean > 16384) CleanOutdated();
 		}
 	}
-
-	public void SetUserMinimalJwtIat(int usedId)
-	{
-		SetUserMinimalJwtIat(usedId, DateTime.UtcNow.AddSeconds(-3));
-	}
-
 
 	/// <returns>Minimal 'iat' attribute value if userId was found, <see cref="DateTime.MinValue"/> otherwise</returns>
 	public DateTime GetUserMinimalJwtIat(int userId)
@@ -98,4 +102,14 @@ public class SessionTerminatorService
 	{
 		return iatUtc > GetUserMinimalJwtIat(userId);
 	}
+
+#if DEBUG // for testing
+	public void SetUserMinimalJwtIat(int usedId)
+	{
+		SetUserMinimalJwtIat(usedId, DateTime.UtcNow);
+	}
+	public int GetCurrentCount() => this._userIdToMinimalAccessJwtIat.Count;
+	public int GetCurrentAddedSinceLastCleanup() => this._addedSinceLastClean;
+	public void Clear() => this.CleanOutdated();
+#endif
 }
