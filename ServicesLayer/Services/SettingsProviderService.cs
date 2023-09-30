@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Configuration;
+using ServicesLayer.Models.Common;
 using ServicesLayer.Models.Runtime;
 
 namespace ServicesLayer.Services;
@@ -58,6 +59,10 @@ public class SettingsProviderService
 	public virtual EmailSendingServiceSettings EmailSendingServiceSettings
 		=> this._configuration.GetSection(nameof(this.EmailSendingServiceSettings))
 		.Get<EmailSendingServiceSettings>() ?? new();
+
+	public virtual LinksInfo LinksInfo
+		=> this._configuration.GetSection(nameof(this.LinksInfo))
+		.Get<LinksInfo>() ?? new();
 
 	public SettingsProviderService(IConfiguration configuration)
 	{
