@@ -1,0 +1,14 @@
+{
+    "backend": {
+        "host": "https://vdb.bruhcontent.ru",
+        "basePath": "/api",
+        "authControllerPath": "/auth",
+        "connectionControllerPath": "/connection",
+        "debugControllerPath": "/debug",
+        "deviceControllerPath": "/device",
+        "linksControllerPath": "/links"
+    },
+    "fontend": {
+        "passwordRecovery":"/recovery-password"
+    }
+}

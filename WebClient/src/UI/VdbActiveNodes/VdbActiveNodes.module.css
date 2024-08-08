@@ -1,0 +1,32 @@
+.nodesWrapper {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    opacity: 1;
+    width: 100%;
+    /*initial*/
+}
+
+.welcomeTransitionEnter {
+    opacity: 0;
+    transform: translateX(-5rem);
+}
+
+.welcomeTransitionEnterActive {
+    opacity: 1;
+    transform: translateX(0);
+    transition: opacity 300ms, transform 300ms;
+}
+
+.noNodesMsg {
+    display: flex;
+    font-size: 1.5rem;
+    align-self: flex-start;
+}
+
+@media screen and (max-aspect-ratio: 0.6/1) {
+    .noNodesMsg {
+        font-size: calc(2 * 1.5rem);
+    }
+}

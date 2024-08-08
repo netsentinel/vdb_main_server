@@ -1,0 +1,87 @@
+.header {
+    display: flex;
+    flex-direction: row;
+    font-family: inherit;
+    margin: 1rem;
+}
+
+.titleWrapper {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    margin-right: 3rem;
+}
+
+.title {
+    display: flex;
+    font-size: 3rem;
+    font-weight: 400;
+    color: inherit;
+}
+
+.subtitle {
+    display: flex;
+    font-size: 2rem;
+    font-weight: 400;
+    margin-top: -1rem;
+    color: inherit;
+}
+
+.beta {
+    display: flex;
+    position: absolute;
+    margin-top: 1.85rem;
+    margin-left: 5.4rem;
+    justify-content: center;
+    color: blue
+}
+
+.menuRow {
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.menuElement {
+    display: flex;
+    font-size: 2rem;
+    align-self: center;
+    margin-right: 3rem;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+
+.menuElement:hover,
+.titleWrapper:hover {
+    color: rgb(0, 0, 150);
+}
+
+a,
+a:visited,
+a:hover,
+a:active {
+    color: inherit;
+    text-decoration: inherit;
+}
+
+@media screen and (max-aspect-ratio: 0.6/1) {
+    .title {
+        font-size: calc(3 * 3rem);
+    }
+
+    .subtitle {
+        font-size: calc(1.2 * 2rem);
+        margin-top: -2rem;
+    }
+
+    .menuElement {
+        font-size: calc(2.2 * 2rem);
+    }
+
+    .beta {
+        font-size: calc(1rem);
+        display: none;
+        /* um, eto... bleh! */
+    }
+}

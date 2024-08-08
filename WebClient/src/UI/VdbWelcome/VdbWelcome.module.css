@@ -1,0 +1,168 @@
+.welcomeWrapper {
+    display: flex;
+    flex-direction: column;
+    margin: 1rem;
+}
+
+.welcomeRow {
+    display: inherit;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+}
+
+.welcomWords {
+    display: inherit;
+    flex-direction: column;
+}
+
+.welcomeWord {
+    display: inherit;
+    font-family: inherit;
+    opacity: inherit;
+    transform: inherit;
+    font-size: 6rem;
+    flex-wrap: nowrap;
+    opacity: 0;
+    /*initial*/
+}
+
+
+.welcomeDescription {
+    display: inherit;
+    flex-direction: column;
+}
+
+.welcomeDecriptionPhrase {
+    max-width: 600px;
+    display: inherit;
+    flex-direction: column;
+    word-wrap: break-word;
+    font-size: 1.75rem;
+    margin-top: 2.5rem;
+    opacity: 0;
+    /*initial*/
+}
+
+@media (orientation: landscape) {
+    .welcomeRow {
+        flex-wrap: nowrap;
+    }
+
+    .welcomeDecriptionPhrase {
+        max-width: calc(600px - 5rem);
+    }
+}
+
+@media (orientation: portrait) {
+    .welcomeRow {
+        flex-wrap: wrap;
+    }
+
+    .welcomeDecriptionPhrase {
+        max-width: 100%;
+    }
+}
+
+.activeNodes {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    opacity: 0;
+    /*initial*/
+}
+
+.currentStatusPhrase {
+    margin-top: 4rem;
+    font-size: 3rem;
+    opacity: 0;
+    /*initial*/
+}
+
+currentStatusPhrase::first-line {
+    text-transform: lowercase;
+}
+
+.nodesList {
+    display: flex;
+    opacity: 0;
+    width: calc(100% + 1rem);
+    /*initial*/
+}
+
+.aboutText {
+    font-size: 1.75rem;
+    opacity: 0;
+}
+
+.myLink,
+.meLink {
+    color: black;
+    text-decoration: underline 1px solid black;
+    font-weight: 400;
+    font-size: inherit;
+    overflow-wrap: break-word;
+}
+
+.meLink {
+    text-decoration: underline 1px solid red;
+}
+
+.outerText {
+    margin: 1rem;
+    display: inline-flex;
+    width: 100%;
+    justify-content: center;
+    color: lightgray;
+    font-size: 1rem;
+}
+
+
+
+
+
+
+.welcomeTransitionEnter {
+    opacity: 0;
+    transform: translateX(-5rem);
+}
+
+.welcomeTransitionEnterActive {
+    opacity: 1;
+    transform: translateX(0);
+    transition: opacity 300ms, transform 300ms;
+}
+
+
+@media screen and (max-aspect-ratio: 0.6/1) {
+    .welcomeWord {
+        font-size: calc(3 * 6rem);
+    }
+
+    .welcomeDecriptionPhrase {
+        font-size: calc(3 * 1.75rem);
+    }
+
+    .currentStatusPhrase {
+        font-size: calc(2 * 3rem);
+    }
+
+    .aboutText {
+        font-size: calc(2 * 1.75rem);
+    }
+
+    .outerText {
+        font-size: calc(2 * 1rem);
+    }
+
+    html,
+    body {
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+}
+
+b {
+    font-weight: 400;
+    text-decoration: underline 1px blue;
+}

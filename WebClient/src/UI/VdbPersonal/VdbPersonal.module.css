@@ -1,0 +1,69 @@
+.personalWrapper {
+    display: flex;
+    flex-direction: column;
+    margin: 1rem;
+    opacity: 0;
+    /*initials*/
+}
+
+.personalText {
+    font-family: inherit;
+    font-size: 3rem;
+    margin-top: 1rem;
+}
+.personalSubText {
+    font-family: inherit;
+    font-size: 1rem;
+    margin-top: -0.5rem;
+}
+
+.loggedAs {
+    font-family: inherit;
+    font-size: 2rem;
+}
+
+.loggedAsEmail {
+    font-weight: 500;
+    margin-right: 1rem;
+}
+
+.welcomeTransitionEnter {
+    opacity: 0;
+    transform: translateX(-5rem);
+}
+
+.welcomeTransitionEnterActive {
+    opacity: 1;
+    transform: translateX(0);
+    transition: opacity 300ms, transform 300ms;
+}
+
+.logoutBtn {
+    font-size: 1.5rem;
+    align-self: center;
+    justify-content: center;
+    padding: .1rem 1rem;
+    background-color: black;
+    color: white;
+    border: 0px;
+    border-radius: 0px;
+    cursor: pointer;
+}
+
+@media screen and (max-aspect-ratio: 0.6/1) {
+    .loggedAs {
+        font-size: calc(2 * 2rem);
+    }
+
+    .personalText {
+        font-size: calc(2 * 3rem);
+    }
+
+    .personalSubText{
+        font-size: calc(2 * 1rem);
+    }
+
+    .logoutBtn {
+        font-size: calc(2* 1.5rem);
+    }
+}

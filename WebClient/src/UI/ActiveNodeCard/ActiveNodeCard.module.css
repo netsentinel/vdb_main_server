@@ -1,0 +1,85 @@
+.col {
+    display: flex;
+    flex-direction: column;
+}
+
+.row {
+    display: flex;
+    flex-direction: row;
+}
+
+.cardWrapper {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1rem;
+    margin-right: 1rem;
+
+    font-size: 1.75rem;
+    font-weight: 400;
+    border-radius: 0;
+    justify-content: center;
+}
+
+.cardInactive,
+.cardActive,
+::first-line {
+    /*text-transform:capitalize;*/
+}
+
+
+@media (orientation: landscape) {
+    .cardWrapper {
+        width: calc(50% - 1rem);
+    }
+}
+
+@media (orientation: portrait) {
+    .cardWrapper {
+        width: calc(100% - 1rem);
+    }
+}
+
+.cardActive,
+.cardInactive,
+.cardDescr {
+    display: inherit;
+    width: 100%;
+    flex-direction: column;
+    padding: .5rem;
+    justify-content: inherit;
+    border: 0;
+    border-radius: 0;
+    text-align: center;
+    background-color: black;
+}
+
+.cardDescr{
+    padding-top: 0;
+    display: inherit;
+    font-size: 1.25rem;
+}
+
+.nodeName {
+    font-size: inherit;
+    display: inherit;
+
+    font-family: Consolas, monospace;
+}
+
+.cardActive {
+    color: lightgreen
+}
+
+.cardInactive {
+    color: red;
+}
+
+
+@media screen and (max-aspect-ratio: 0.6/1) {
+    .cardWrapper {
+        font-size: calc(2.25 * 1.75rem);
+    }
+    .cardDescr{
+        font-size: calc(2.25 *1.25rem);
+    }
+}

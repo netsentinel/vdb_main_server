@@ -1,0 +1,114 @@
+.cardWrapper {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    border: 2px solid black;
+    border-radius: 0;
+    padding: .5rem;
+    margin: 0;
+    margin-bottom: .5rem;
+    justify-content: space-between;
+    font-size: 1.5rem;
+}
+
+.card {
+    border: 2px solid black;
+    border-radius: 0;
+    pad: .3rem;
+    font-size: inherit;
+}
+
+.pkSpan {
+    display: inline-flex;
+    box-sizing: border-box;
+    overflow-x: hidden;
+    text-overflow: ellipsis;
+    flex-wrap: nowrap;
+    font-size: inherit;
+}
+
+.removeWrapper {
+    display: inherit;
+    align-self: center;
+    flex-direction: column;
+    font-size: inherit;
+}
+
+.errorMsg,
+.commonMsg {
+    display: inherit;
+    align-self: center;
+    font-size: 1.25rem;
+}
+
+.errorMsg {
+    color: darkred;
+}
+
+.commonMsg {
+    color: darkgreen;
+}
+
+.removeButton {
+    display: flex;
+    justify-content: center;
+    font-family: inherit;
+    font-size: 1rem;
+    padding: .3rem 1rem;
+    border: 0px;
+    border-radius: 0px;
+    background-color: black;
+    color: white;
+    cursor: pointer;
+}
+
+@media (orientation:landscape) {
+    .cardWrapper {
+        flex-direction: row;
+    }
+
+    .removeWrapper {
+        align-self: center;
+    }
+}
+
+@media (orientation:portrait) {
+    .cardWrapper {
+        flex-direction: column;
+    }
+
+    .removeButton {
+        padding: 1rem;
+    }
+
+    .removeWrapper {
+        align-self: unset;
+        width: 100%;
+    }
+}
+
+.col {
+    display: flex;
+    flex-direction: column;
+}
+
+.row {
+    display: flex;
+    flex-direction: row;
+}
+
+
+@media screen and (max-aspect-ratio: 0.6/1) {
+    .cardWrapper {
+        font-size: calc(2.25 * 1.5rem);
+    }
+
+    .errorMsg,
+    .commonMsg {
+        font-size: calc(2 * 1.25rem);
+    }
+
+    .removeButton {
+        font-size: calc(3 * 1rem);
+    }
+}

@@ -1,0 +1,65 @@
+.downloadWrapper {
+    display: flex;
+    margin: 1rem;
+    width: 100%;
+    flex-direction: column;
+    margin-top: 2rem;
+    opacity: 0;
+    /*initial*/
+}
+
+.textSpan {
+    display: inherit;
+    align-self: flex-end;
+    font-size: 3rem;
+}
+
+.goToVTButton,
+.goToReleaseButton {
+    display: inherit;
+    padding: .1rem 1rem;
+    margin-top: 1rem;
+    font-size: 2rem;
+    box-sizing: border-box;
+    align-self: flex-end;
+    color: white;
+    background-color: black;
+    border: 0px;
+    opacity: 0;
+    /*initial*/
+}
+
+.goToVTButton,
+.goToReleaseButton:hover {
+    cursor: pointer;
+}
+
+.goToVTButton{
+    font-size: 1.5rem;
+    padding: .1rem .5rem;
+}
+
+.welcomeTransitionEnter {
+    opacity: 0;
+    transform: translateX(-5rem);
+}
+
+.welcomeTransitionEnterActive {
+    opacity: 1;
+    transform: translateX(0);
+    transition: opacity 300ms, transform 300ms;
+}
+
+@media screen and (max-aspect-ratio: 0.6/1) {
+    .textSpan {
+        font-size: calc(2 * 3rem);
+    }
+
+    .goToReleaseButton {
+        font-size: calc(1.75 * 2rem);
+    }
+
+    .goToVTButton {
+        font-size: calc(1.75 * 1.5rem);
+    }
+}

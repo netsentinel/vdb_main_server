@@ -1,0 +1,26 @@
+.headFastEnter {
+    opacity: 0;
+}
+
+.headFastActive {
+    opacity: 1;
+    transition: opacity 300ms;
+}
+
+.headSecureEnter {
+    opacity: 0;
+}
+
+.headSecureActive {
+    opacity: 1;
+    transition: opacity 500ms;
+}
+
+.headOpensourceEnter {
+    opacity: 0;
+}
+
+.headOpensourceActive {
+    opacity: 1;
+    transition: opacity 700ms;
+}
